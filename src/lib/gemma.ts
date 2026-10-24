@@ -76,13 +76,12 @@ export async function generateWithGemma(
           config.responseMimeType = "application/json";
         }
 
-        if (options.maxOutputTokens) {
-          config.maxOutputTokens = options.maxOutputTokens;
-        }
+        // Default to 8192 tokens so thought tokens never exhaust the output quota
+        config.maxOutputTokens = options.maxOutputTokens || 8192;
 
-        // 28s timeout to prevent hanging on Google's overloaded queues
+        // 90s timeout to allow full generation of multi-day agendas
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 28000);
+        const timeoutId = setTimeout(() => controller.abort(), 90000);
 
         let response;
         try {
@@ -95,12 +94,20 @@ export async function generateWithGemma(
           clearTimeout(timeoutId);
         }
 
-        // Extract text directly or from candidates (handles thinking model output parts)
-        let text = response.text || "";
-        if (!text && response.candidates?.[0]?.content?.parts) {
+        // Extract text from non-thought parts (joins all candidate parts)
+        let text = "";
+        if (response.candidates?.[0]?.content?.parts) {
           const parts = response.candidates[0].content.parts;
-          const nonThought = parts.find((p) => !p.thought);
-          text = nonThought?.text || parts[parts.length - 1]?.text || "";
+          const nonThought = parts.filter((p) => !p.thought);
+          if (nonThought.length > 0) {
+            text = nonThought.map((p) => p.text || "").join("");
+          } else {
+            text = parts[parts.length - 1]?.text || "";
+          }
+        }
+
+        if (!text) {
+          text = response.text || "";
         }
 
         text = text.trim();
@@ -147,7 +154,7 @@ export async function generateWithGemma(
   throw (
     lastError ||
     new Error(
-      "Failed to generate response from Gemma 4 after multiple attempts."
+      "Gemma 4 inference failed across all model attempts. Please verify your API key."
     )
   );
 }

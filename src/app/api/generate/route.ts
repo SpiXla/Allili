@@ -1,6 +1,65 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateWithGemma } from "@/lib/gemma";
 
+/**
+ * Robust JSON array extractor and truncation repair.
+ * If output was truncated by token limit, it salvages all complete objects
+ * up to the last closing brace and appends the closing bracket.
+ */
+function parseRobustJsonArray(rawText: string): unknown[] {
+  let cleaned = rawText.trim();
+
+  // Strip markdown code fences if present
+  if (cleaned.startsWith("```")) {
+    cleaned = cleaned
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/, "")
+      .trim();
+  }
+
+  // 1. Direct standard parse
+  try {
+    const data = JSON.parse(cleaned);
+    if (Array.isArray(data)) return data;
+  } catch {
+    // continue
+  }
+
+  // 2. Regex bracket match
+  const arrayMatch = cleaned.match(/\[\s*\{[\s\S]*\}\s*\]/);
+  if (arrayMatch) {
+    try {
+      const data = JSON.parse(arrayMatch[0]);
+      if (Array.isArray(data)) return data;
+    } catch {
+      // continue
+    }
+  }
+
+  // 3. Salvage truncated JSON array: find the opening [ and the last valid complete object }
+  const firstBracket = cleaned.indexOf("[");
+  if (firstBracket !== -1) {
+    const fromBracket = cleaned.slice(firstBracket);
+    const lastBrace = fromBracket.lastIndexOf("}");
+    if (lastBrace !== -1) {
+      const repaired = fromBracket.slice(0, lastBrace + 1) + "\n]";
+      try {
+        const data = JSON.parse(repaired);
+        if (Array.isArray(data) && data.length > 0) {
+          console.log(
+            `[JSON Repair] Successfully salvaged ${data.length} tasks from partial model output.`
+          );
+          return data;
+        }
+      } catch (err) {
+        console.warn("[JSON Repair] Salvage attempt failed:", err);
+      }
+    }
+  }
+
+  throw new Error("Failed to parse valid JSON array from Gemma 4 output.");
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { prompt, currentDate, dayOfWeek } = await req.json();
@@ -25,8 +84,8 @@ export async function POST(req: NextRequest) {
     const SYSTEM_PROMPT = `You are an automated API schedule generator.
 Today's date is ${todayStr} (${dayStr}).
 
-CRITICAL DATE & FORMAT RULES:
-1. Output ONLY the raw JSON array string starting with [ and ending with ].
+CRITICAL INSTRUCTIONS:
+1. Convert the user's agenda directly into a raw JSON array.
 2. Every item MUST have:
    - "date": "YYYY-MM-DD"
    - "title": "string"
@@ -35,11 +94,10 @@ CRITICAL DATE & FORMAT RULES:
    - "category": "work" | "break" | "routine"
    - "advice": "short string"
 3. DATE ANCHORING:
-   - The primary schedule date MUST be today: "${todayStr}".
-   - If tasks are spread across multiple days (e.g., today and tomorrow, or a 3-day plan), sequentially increment the date from "${todayStr}".
-   - NEVER use past years (2023, 2024, etc.) or random dates.
-4. Schema sample: [{"id": "uuid", "title": "Deep Work", "duration_minutes": 90, "date": "${todayStr}", "start_time": "09:00", "category": "work", "advice": "Focus block"}]
-Do NOT think, do NOT write markdown explanations or notes. Output ONLY the raw JSON array.`;
+   - Primary date is "${todayStr}".
+   - If tasks are spread across today and tomorrow, increment the date sequentially starting from "${todayStr}".
+   - NEVER use past years (2023, 2024, etc.).
+4. Do NOT output markdown explanations, thoughts, or text. Output ONLY the JSON array starting with [ and ending with ].`;
 
     const preferredModel = process.env.GEMMA_MODEL || "gemma-4-26b-a4b-it";
 
@@ -48,35 +106,13 @@ Do NOT think, do NOT write markdown explanations or notes. Output ONLY the raw J
       systemInstruction: SYSTEM_PROMPT,
       jsonMode: true,
       preferredModel,
-      maxOutputTokens: 2048,
+      maxOutputTokens: 8192,
     });
 
-    // Parse the JSON array, cleaning any potential markdown code fences
-    let cleanedText = rawText.trim();
-    if (cleanedText.startsWith("```")) {
-      cleanedText = cleanedText
-        .replace(/^```(?:json)?\s*/i, "")
-        .replace(/\s*```$/, "")
-        .trim();
-    }
+    const parsedData = parseRobustJsonArray(rawText);
 
-    let parsedData: unknown;
-    try {
-      parsedData = JSON.parse(cleanedText);
-    } catch {
-      // Fallback: extract JSON array brackets if model prepended/appended text
-      const arrayMatch = cleanedText.match(/\[\s*\{[\s\S]*\}\s*\]/);
-      if (arrayMatch) {
-        parsedData = JSON.parse(arrayMatch[0]);
-      } else {
-        throw new Error(
-          "Failed to parse valid JSON array from Gemma 4 output."
-        );
-      }
-    }
-
-    if (!Array.isArray(parsedData)) {
-      throw new Error("Invalid response: expected a JSON array of tasks.");
+    if (!Array.isArray(parsedData) || parsedData.length === 0) {
+      throw new Error("Invalid response: expected a non-empty task array.");
     }
 
     // Post-process to guarantee every task has a valid current or future date
@@ -87,11 +123,16 @@ Do NOT think, do NOT write markdown explanations or notes. Output ONLY the raw J
 
     const todayYear = parseInt(todayStr.split("-")[0], 10);
 
-    const validatedTasks = parsedData.map((task: RawTask) => {
-      let taskDate = task.date;
+    const validatedTasks = parsedData.map((task: unknown) => {
+      const t = task as RawTask;
+      let taskDate = t.date;
 
       // If missing or has invalid format
-      if (!taskDate || typeof taskDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(taskDate)) {
+      if (
+        !taskDate ||
+        typeof taskDate !== "string" ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(taskDate)
+      ) {
         taskDate = todayStr;
       } else {
         const [yearStr] = taskDate.split("-");
@@ -103,7 +144,7 @@ Do NOT think, do NOT write markdown explanations or notes. Output ONLY the raw J
       }
 
       return {
-        ...task,
+        ...t,
         date: taskDate,
       };
     });
