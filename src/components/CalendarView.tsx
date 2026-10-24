@@ -20,10 +20,10 @@ import {
 } from "lucide-react";
 import { useScheduleStore, type Task } from "@/store/useScheduleStore";
 
-// 96px per hour ensures 15m = 24px, 30m = 48px, 60m = 96px
+// 96px per hour ensures 15m = 24px, 30m = 48px, 60m = 96px with zero overlap
 const HOUR_HEIGHT = 96;
 
-/* ── Category styling config ── */
+/* ── Category styling config with rich Cyber-Luxe palette ── */
 interface CategoryStyle {
   label: string;
   stripe: string;
@@ -39,48 +39,48 @@ interface CategoryStyle {
 const categoryTheme: Record<string, CategoryStyle> = {
   work: {
     label: "Deep Work",
-    stripe: "bg-violet-500",
-    badgeBg: "bg-violet-500/15",
-    badgeText: "text-violet-300",
-    border: "border-violet-500/25 hover:border-violet-500/50",
-    glow: "hover:shadow-[0_4px_24px_rgba(139,92,246,0.18)]",
-    cardBg: "bg-gradient-to-br from-[#161424]/95 to-[#12111c]/95",
-    dot: "bg-violet-400",
+    stripe: "bg-gradient-to-b from-indigo-400 via-indigo-500 to-purple-500",
+    badgeBg: "bg-indigo-500/15 border border-indigo-500/30",
+    badgeText: "text-indigo-300",
+    border: "border-indigo-500/30 hover:border-indigo-400/60",
+    glow: "hover:shadow-[0_8px_30px_rgba(99,102,241,0.22)]",
+    cardBg: "bg-gradient-to-br from-[#161a2e]/95 via-[#131626]/95 to-[#0f111e]/95",
+    dot: "bg-indigo-400",
     icon: Briefcase,
   },
   break: {
     label: "Break & Rest",
-    stripe: "bg-emerald-400",
-    badgeBg: "bg-emerald-500/15",
+    stripe: "bg-gradient-to-b from-emerald-400 via-emerald-500 to-teal-500",
+    badgeBg: "bg-emerald-500/15 border border-emerald-500/30",
     badgeText: "text-emerald-300",
-    border: "border-emerald-500/25 hover:border-emerald-500/50",
-    glow: "hover:shadow-[0_4px_24px_rgba(16,185,129,0.18)]",
-    cardBg: "bg-gradient-to-br from-[#121c17]/95 to-[#0e1612]/95",
+    border: "border-emerald-500/30 hover:border-emerald-400/60",
+    glow: "hover:shadow-[0_8px_30px_rgba(16,185,129,0.22)]",
+    cardBg: "bg-gradient-to-br from-[#11241c]/95 via-[#0e1c16]/95 to-[#0b1611]/95",
     dot: "bg-emerald-400",
     icon: Coffee,
   },
   routine: {
     label: "Routine",
-    stripe: "bg-sky-400",
-    badgeBg: "bg-sky-500/15",
-    badgeText: "text-sky-300",
-    border: "border-sky-500/25 hover:border-sky-500/50",
-    glow: "hover:shadow-[0_4px_24px_rgba(56,189,248,0.18)]",
-    cardBg: "bg-gradient-to-br from-[#121824]/95 to-[#0e131c]/95",
-    dot: "bg-sky-400",
+    stripe: "bg-gradient-to-b from-amber-400 via-orange-400 to-rose-400",
+    badgeBg: "bg-amber-500/15 border border-amber-500/30",
+    badgeText: "text-amber-300",
+    border: "border-amber-500/30 hover:border-amber-400/60",
+    glow: "hover:shadow-[0_8px_30px_rgba(245,158,11,0.22)]",
+    cardBg: "bg-gradient-to-br from-[#241a12]/95 via-[#1c140e]/95 to-[#16100b]/95",
+    dot: "bg-amber-400",
     icon: SunMedium,
   },
 };
 
 const defaultTheme: CategoryStyle = {
   label: "Task",
-  stripe: "bg-zinc-400",
-  badgeBg: "bg-zinc-800",
-  badgeText: "text-zinc-300",
-  border: "border-zinc-700/30 hover:border-zinc-500/40",
-  glow: "hover:shadow-[0_4px_20px_rgba(255,255,255,0.06)]",
-  cardBg: "bg-gradient-to-br from-[#16161c]/95 to-[#121216]/95",
-  dot: "bg-zinc-400",
+  stripe: "bg-gradient-to-b from-slate-400 to-slate-600",
+  badgeBg: "bg-slate-800 border border-slate-700",
+  badgeText: "text-slate-300",
+  border: "border-slate-700/40 hover:border-slate-500/50",
+  glow: "hover:shadow-[0_8px_25px_rgba(255,255,255,0.06)]",
+  cardBg: "bg-gradient-to-br from-[#161922]/95 via-[#12141c]/95 to-[#0e1017]/95",
+  dot: "bg-slate-400",
   icon: Clock,
 };
 
@@ -314,36 +314,36 @@ export function CalendarView() {
   const totalGridHeight = (endHour - startHour) * HOUR_HEIGHT;
   const isSingleDay = dateColumns.length === 1;
 
-  // Minimum column width of 240px ensures multi-day plans never cramp text
-  const columnWidth = isSingleDay ? "100%" : "250px";
+  // Minimum column width of 260px ensures multi-day plans never cramp text
+  const columnWidth = isSingleDay ? "100%" : "260px";
   const minCanvasWidth = isSingleDay
     ? "100%"
-    : `${dateColumns.length * 250 + 64}px`;
+    : `${dateColumns.length * 260 + 64}px`;
 
   return (
     <div className="flex flex-col h-full w-full select-none">
       {/* ── Subheader / View Controller ── */}
-      <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/[0.06] flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-zinc-300">
+      <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/[0.08] flex-shrink-0">
+        <div className="flex items-center gap-2.5">
+          <span className="text-xs font-semibold text-slate-200">
             {dateColumns.length === 1
               ? "Daily Plan"
               : `${dateColumns.length} Days Planned`}
           </span>
-          <span className="text-[11px] font-mono text-zinc-500">
-            ({startHour.toString().padStart(2, "0")}:00 –{" "}
-            {endHour.toString().padStart(2, "0")}:00)
+          <span className="text-[11px] font-mono text-slate-400 bg-white/[0.04] px-2 py-0.5 rounded-md border border-white/[0.06]">
+            {startHour.toString().padStart(2, "0")}:00 –{" "}
+            {endHour.toString().padStart(2, "0")}:00
           </span>
         </div>
 
         {/* View Switcher: Grid vs Agenda */}
-        <div className="flex items-center gap-1 p-1 bg-white/[0.03] border border-white/[0.08] rounded-xl">
+        <div className="flex items-center gap-1 p-1 bg-[#0b0e17] border border-white/[0.08] rounded-xl shadow-inner">
           <button
             onClick={() => setViewMode("grid")}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
               viewMode === "grid"
-                ? "bg-violet-500 text-white shadow-sm"
-                : "text-zinc-400 hover:text-zinc-200"
+                ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)]"
+                : "text-slate-400 hover:text-slate-200 hover:bg-white/[0.03]"
             }`}
           >
             <LayoutGrid className="w-3.5 h-3.5" />
@@ -351,10 +351,10 @@ export function CalendarView() {
           </button>
           <button
             onClick={() => setViewMode("agenda")}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
               viewMode === "agenda"
-                ? "bg-violet-500 text-white shadow-sm"
-                : "text-zinc-400 hover:text-zinc-200"
+                ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.4)]"
+                : "text-slate-400 hover:text-slate-200 hover:bg-white/[0.03]"
             }`}
           >
             <ListFilter className="w-3.5 h-3.5" />
@@ -365,16 +365,16 @@ export function CalendarView() {
 
       {/* ── View 1: Visual Time Grid ── */}
       {viewMode === "grid" && (
-        <div className="relative flex-1 overflow-x-auto overflow-y-auto rounded-2xl bg-[#0a0a0f] border border-white/[0.08] shadow-2xl">
+        <div className="relative flex-1 overflow-x-auto overflow-y-auto rounded-2xl bg-[#080b12] border border-white/[0.08] shadow-[0_12px_40px_rgba(0,0,0,0.6)]">
           <div
             style={{ minWidth: minCanvasWidth }}
             className={isSingleDay ? "max-w-2xl mx-auto w-full" : "w-full"}
           >
             {/* ── Sticky Date Header ── */}
-            <div className="sticky top-0 z-30 flex border-b border-white/[0.08] bg-[#0c0c12]/95 backdrop-blur-xl">
+            <div className="sticky top-0 z-30 flex border-b border-white/[0.08] bg-[#0c0f18]/95 backdrop-blur-2xl">
               {/* Hour corner */}
               <div className="w-16 flex-shrink-0 border-r border-white/[0.06] py-3 px-2 flex items-center justify-center">
-                <Clock className="w-3.5 h-3.5 text-zinc-500" />
+                <Clock className="w-3.5 h-3.5 text-indigo-400" />
               </div>
 
               {/* Day header columns */}
@@ -397,19 +397,19 @@ export function CalendarView() {
                       <div className="flex items-center gap-2">
                         <span
                           className={`text-xs font-semibold tracking-tight ${
-                            isToday ? "text-violet-400" : "text-zinc-200"
+                            isToday ? "text-indigo-400 font-bold" : "text-slate-200"
                           }`}
                         >
                           {dayName}
                         </span>
                         {formattedDate && (
-                          <span className="text-[11px] font-mono text-zinc-500">
+                          <span className="text-[11px] font-mono text-slate-400">
                             {formattedDate}
                           </span>
                         )}
                       </div>
 
-                      <span className="text-[10px] font-mono text-zinc-400 bg-white/[0.04] px-2 py-0.5 rounded-md border border-white/[0.06]">
+                      <span className="text-[10px] font-mono text-slate-300 bg-white/[0.06] px-2 py-0.5 rounded-md border border-white/[0.08]">
                         {count} {count === 1 ? "task" : "tasks"}
                       </span>
                     </div>
@@ -424,7 +424,7 @@ export function CalendarView() {
               style={{ height: `${totalGridHeight}px` }}
             >
               {/* Left Hour Axis */}
-              <div className="w-16 flex-shrink-0 border-r border-white/[0.06] bg-[#08080c]/80 select-none relative">
+              <div className="w-16 flex-shrink-0 border-r border-white/[0.06] bg-[#070910]/90 select-none relative">
                 {hours.map((hour, idx) => {
                   const topPx = idx * HOUR_HEIGHT;
                   const timeStr = `${String(hour).padStart(2, "0")}:00`;
@@ -434,7 +434,7 @@ export function CalendarView() {
                       style={{ top: `${topPx}px` }}
                       className="absolute left-0 right-0 -translate-y-1/2 pr-3 text-right"
                     >
-                      <span className="text-[11px] font-mono font-medium text-zinc-400">
+                      <span className="text-[11px] font-mono font-medium text-slate-400">
                         {timeStr}
                       </span>
                     </div>
@@ -488,7 +488,7 @@ export function CalendarView() {
                             defaultTheme;
 
                           // 3 distinct rendering modes based on exact height
-                          const isPill = heightPx < 36; // 15m tasks / short breaks
+                          const isPill = heightPx < 36; // 15m tasks / micro breaks
                           const isCompact = heightPx >= 36 && heightPx < 70; // 30m tasks
                           const isStandard = heightPx >= 70; // 45m+ tasks
 
@@ -497,26 +497,26 @@ export function CalendarView() {
                               key={task.id}
                               initial={{ opacity: 0, scale: 0.96 }}
                               animate={{ opacity: 1, scale: 1 }}
-                              whileHover={{ scale: 1.012, zIndex: 30 }}
+                              whileHover={{ scale: 1.015, zIndex: 30 }}
                               transition={{ duration: 0.15 }}
                               onClick={() => openEditModal(task)}
                               style={{
                                 top: `${topPx}px`,
                                 height: `${heightPx}px`,
-                                left: `calc(${leftPercent}% + 4px)`,
-                                width: `calc(${widthPercent}% - 8px)`,
+                                left: `calc(${leftPercent}% + 5px)`,
+                                width: `calc(${widthPercent}% - 10px)`,
                               }}
-                              className={`absolute rounded-xl border backdrop-blur-md
+                              className={`absolute rounded-xl border backdrop-blur-xl
                                          cursor-pointer transition-all duration-200
                                          overflow-hidden group shadow-md
                                          ${theme.cardBg} ${theme.border} ${theme.glow}
                                          ${
                                            task.completed
-                                             ? "opacity-35 grayscale-[50%]"
+                                             ? "opacity-35 grayscale-[60%]"
                                              : ""
                                          }`}
                             >
-                              {/* Left category accent strip */}
+                              {/* Left category accent strip with rounded end caps */}
                               <div
                                 className={`absolute left-0 top-0 bottom-0 w-1 ${theme.stripe}`}
                               />
@@ -529,18 +529,18 @@ export function CalendarView() {
                                       className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${theme.dot}`}
                                     />
                                     <span
-                                      className={`text-[11px] font-medium truncate text-zinc-100 ${
-                                        task.completed ? "line-through text-zinc-500" : ""
+                                      className={`text-[11px] font-medium truncate text-slate-100 ${
+                                        task.completed ? "line-through text-slate-500" : ""
                                       }`}
                                     >
                                       {task.title}
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-1 flex-shrink-0">
-                                    <span className="text-[10px] font-mono text-zinc-400">
+                                    <span className="text-[10px] font-mono text-slate-400">
                                       {task.startTime}
                                     </span>
-                                    <span className="text-[9px] font-mono text-zinc-500 bg-white/[0.04] px-1 py-0.5 rounded">
+                                    <span className="text-[9px] font-mono text-slate-400 bg-white/[0.06] px-1 py-0.5 rounded">
                                       {task.duration}m
                                     </span>
                                   </div>
@@ -549,7 +549,7 @@ export function CalendarView() {
 
                               {/* ── Mode 2: Compact Card (36px - 70px, e.g. 30-min task) ── */}
                               {isCompact && (
-                                <div className="h-full p-2 pl-3 flex flex-col justify-between">
+                                <div className="h-full p-2 pl-3.5 flex flex-col justify-between">
                                   <div className="flex items-start justify-between gap-1.5">
                                     <div className="flex items-center gap-1.5 min-w-0">
                                       <button
@@ -558,34 +558,34 @@ export function CalendarView() {
                                           e.stopPropagation();
                                           toggleTaskCompleted(task.id);
                                         }}
-                                        className="text-zinc-500 hover:text-emerald-400 transition-colors flex-shrink-0"
+                                        className="text-slate-500 hover:text-emerald-400 transition-colors flex-shrink-0"
                                       >
                                         {task.completed ? (
                                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                                         ) : (
-                                          <Circle className="w-3.5 h-3.5 text-zinc-600 group-hover:text-zinc-400" />
+                                          <Circle className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400" />
                                         )}
                                       </button>
                                       <span
-                                        className={`text-xs font-semibold text-zinc-100 truncate ${
-                                          task.completed ? "line-through text-zinc-500" : ""
+                                        className={`text-xs font-semibold text-slate-100 truncate ${
+                                          task.completed ? "line-through text-slate-500" : ""
                                         }`}
                                       >
                                         {task.title}
                                       </span>
                                     </div>
-                                    <span className="text-[10px] font-mono text-zinc-400 flex-shrink-0">
+                                    <span className="text-[10px] font-mono text-slate-400 flex-shrink-0">
                                       {task.startTime}
                                     </span>
                                   </div>
 
                                   <div className="flex items-center justify-between gap-2 pt-0.5">
                                     <span
-                                      className={`text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.2 rounded ${theme.badgeBg} ${theme.badgeText}`}
+                                      className={`text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded ${theme.badgeBg} ${theme.badgeText}`}
                                     >
                                       {task.category || "routine"}
                                     </span>
-                                    <span className="text-[10px] font-mono text-zinc-400">
+                                    <span className="text-[10px] font-mono text-slate-400">
                                       {task.duration}m
                                     </span>
                                   </div>
@@ -594,33 +594,33 @@ export function CalendarView() {
 
                               {/* ── Mode 3: Standard / Expanded Card (>=70px, e.g. 45–90+ mins) ── */}
                               {isStandard && (
-                                <div className="h-full p-3 pl-3.5 flex flex-col justify-between">
+                                <div className="h-full p-3 pl-4 flex flex-col justify-between">
                                   <div>
                                     <div className="flex items-start justify-between gap-1.5 mb-1">
-                                      <div className="flex items-start gap-1.5 min-w-0">
+                                      <div className="flex items-start gap-2 min-w-0">
                                         <button
                                           type="button"
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             toggleTaskCompleted(task.id);
                                           }}
-                                          className="text-zinc-500 hover:text-emerald-400 transition-colors mt-0.5 flex-shrink-0"
+                                          className="text-slate-500 hover:text-emerald-400 transition-colors mt-0.5 flex-shrink-0"
                                         >
                                           {task.completed ? (
                                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                                           ) : (
-                                            <Circle className="w-3.5 h-3.5 text-zinc-600 group-hover:text-zinc-400" />
+                                            <Circle className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400" />
                                           )}
                                         </button>
                                         <div>
                                           <h4
-                                            className={`text-xs font-bold text-zinc-100 line-clamp-2 leading-snug ${
-                                              task.completed ? "line-through text-zinc-500" : ""
+                                            className={`text-xs font-bold text-slate-100 line-clamp-2 leading-snug ${
+                                              task.completed ? "line-through text-slate-500" : ""
                                             }`}
                                           >
                                             {task.title}
                                           </h4>
-                                          <span className="text-[10px] font-mono text-zinc-400 block mt-0.5">
+                                          <span className="text-[10px] font-mono text-slate-400 block mt-0.5">
                                             {task.startTime}
                                             {task.endTime ? ` – ${task.endTime}` : ""}
                                           </span>
@@ -629,19 +629,19 @@ export function CalendarView() {
                                     </div>
 
                                     {task.description && heightPx >= 95 && (
-                                      <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed pl-5 mt-1">
+                                      <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed pl-5 mt-1">
                                         {task.description}
                                       </p>
                                     )}
                                   </div>
 
-                                  <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-white/[0.04]">
+                                  <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-white/[0.05]">
                                     <span
                                       className={`text-[9px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded ${theme.badgeBg} ${theme.badgeText}`}
                                     >
                                       {theme.label}
                                     </span>
-                                    <span className="text-[10px] font-mono text-zinc-400">
+                                    <span className="text-[10px] font-mono text-slate-400">
                                       {task.duration} mins
                                     </span>
                                   </div>
@@ -671,27 +671,27 @@ export function CalendarView() {
             return (
               <div
                 key={colDate}
-                className="rounded-2xl bg-[#0c0c12]/80 border border-white/[0.08] p-5 shadow-xl"
+                className="rounded-2xl bg-[#0c0f18]/85 border border-white/[0.08] p-5 shadow-[0_8px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl"
               >
                 {/* Date subheader */}
                 <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-white/[0.06]">
                   <div className="flex items-center gap-2.5">
-                    <CalendarIcon className="w-4 h-4 text-violet-400" />
+                    <CalendarIcon className="w-4 h-4 text-indigo-400" />
                     <span
                       className={`text-sm font-semibold ${
-                        isToday ? "text-violet-300" : "text-zinc-200"
+                        isToday ? "text-indigo-400 font-bold" : "text-slate-200"
                       }`}
                     >
                       {dayName}
                     </span>
                     {formattedDate && (
-                      <span className="text-xs font-mono text-zinc-500">
+                      <span className="text-xs font-mono text-slate-400">
                         {formattedDate}
                       </span>
                     )}
                   </div>
 
-                  <span className="text-xs font-mono text-zinc-400">
+                  <span className="text-xs font-mono text-slate-400 bg-white/[0.04] px-2.5 py-1 rounded-md border border-white/[0.06]">
                     {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
                   </span>
                 </div>
@@ -722,12 +722,12 @@ export function CalendarView() {
                               e.stopPropagation();
                               toggleTaskCompleted(task.id);
                             }}
-                            className="text-zinc-500 hover:text-emerald-400 transition-colors flex-shrink-0"
+                            className="text-slate-500 hover:text-emerald-400 transition-colors flex-shrink-0"
                           >
                             {task.completed ? (
                               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                             ) : (
-                              <Circle className="w-4 h-4 text-zinc-600 group-hover:text-zinc-400" />
+                              <Circle className="w-4 h-4 text-slate-600 group-hover:text-slate-400" />
                             )}
                           </button>
 
@@ -735,23 +735,23 @@ export function CalendarView() {
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
                               <h4
-                                className={`text-xs font-semibold text-zinc-200 truncate ${
+                                className={`text-xs font-semibold text-slate-100 truncate ${
                                   task.completed
-                                    ? "line-through text-zinc-500"
+                                    ? "line-through text-slate-500"
                                     : ""
                                 }`}
                               >
                                 {task.title}
                               </h4>
                               <span
-                                className={`inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded ${theme.badgeBg} ${theme.badgeText}`}
+                                className={`inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded ${theme.badgeBg} ${theme.badgeText}`}
                               >
                                 <IconComp className="w-2.5 h-2.5" />
                                 {task.category || "routine"}
                               </span>
                             </div>
                             {task.description && (
-                              <p className="text-[11px] text-zinc-400 truncate mt-0.5">
+                              <p className="text-[11px] text-slate-400 truncate mt-0.5">
                                 {task.description}
                               </p>
                             )}
@@ -761,14 +761,14 @@ export function CalendarView() {
                         {/* Right: Time & Edit trigger */}
                         <div className="flex items-center gap-3 flex-shrink-0">
                           <div className="text-right">
-                            <span className="text-xs font-mono font-medium text-zinc-300 block">
+                            <span className="text-xs font-mono font-medium text-slate-200 block">
                               {task.startTime}
                             </span>
-                            <span className="text-[10px] font-mono text-zinc-500 block">
+                            <span className="text-[10px] font-mono text-slate-400 block">
                               {task.duration}m
                             </span>
                           </div>
-                          <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-zinc-300 transition-colors" />
+                          <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-slate-300 transition-colors" />
                         </div>
                       </motion.div>
                     );
@@ -790,7 +790,7 @@ export function CalendarView() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setEditingTask(null)}
-              className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
             />
 
             {/* Dialog panel */}
@@ -799,19 +799,19 @@ export function CalendarView() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 12 }}
               transition={{ duration: 0.15, ease: "easeOut" }}
-              className="relative z-10 w-full max-w-md rounded-2xl bg-[#121218] border border-white/[0.12] p-6 shadow-2xl"
+              className="relative z-10 w-full max-w-md rounded-2xl bg-[#0f121b] border border-white/[0.14] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.7)]"
             >
               {/* Header */}
               <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-violet-500/15 border border-violet-500/30 flex items-center justify-center">
-                    <SlidersHorizontal className="w-4 h-4 text-violet-400" />
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/40 flex items-center justify-center">
+                    <SlidersHorizontal className="w-4 h-4 text-indigo-400" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-zinc-100">
+                    <h3 className="text-sm font-semibold text-slate-100">
                       Edit Task
                     </h3>
-                    <p className="text-[11px] text-zinc-500 font-mono">
+                    <p className="text-[11px] text-slate-400 font-mono">
                       {editingTask.date || "Today"}
                     </p>
                   </div>
@@ -819,7 +819,7 @@ export function CalendarView() {
 
                 <button
                   onClick={() => setEditingTask(null)}
-                  className="text-zinc-500 hover:text-zinc-200 transition-colors p-1"
+                  className="text-slate-400 hover:text-slate-200 transition-colors p-1"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -829,7 +829,7 @@ export function CalendarView() {
               <form onSubmit={handleSaveEdit} className="space-y-4 pt-4">
                 {/* Title */}
                 <div>
-                  <label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">
+                  <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-300 mb-1.5">
                     Title
                   </label>
                   <input
@@ -845,7 +845,7 @@ export function CalendarView() {
                 {/* Time & Duration */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">
+                    <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-300 mb-1.5">
                       Start Time
                     </label>
                     <input
@@ -858,7 +858,7 @@ export function CalendarView() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">
+                    <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-300 mb-1.5">
                       Duration (min)
                     </label>
                     <input
@@ -876,7 +876,7 @@ export function CalendarView() {
 
                 {/* Category Selector */}
                 <div>
-                  <label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">
+                  <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-300 mb-1.5">
                     Category
                   </label>
                   <div className="grid grid-cols-3 gap-2">
@@ -890,8 +890,8 @@ export function CalendarView() {
                           onClick={() => setEditCategory(cat)}
                           className={`px-3 py-2 rounded-xl text-xs font-medium border text-center transition-all ${
                             isSelected
-                              ? `${theme.badgeBg} ${theme.badgeText} border-violet-500/50 shadow-sm`
-                              : "bg-white/[0.02] border-white/[0.06] text-zinc-400 hover:text-zinc-200"
+                              ? `${theme.badgeBg} ${theme.badgeText} shadow-md`
+                              : "bg-white/[0.03] border-white/[0.06] text-slate-400 hover:text-slate-200"
                           }`}
                         >
                           {theme.label}
@@ -903,10 +903,10 @@ export function CalendarView() {
 
                 {/* Advice preview if present */}
                 {editingTask.description && (
-                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-xs text-zinc-400 leading-relaxed flex items-start gap-2">
-                    <Sparkles className="w-3.5 h-3.5 text-violet-400 mt-0.5 flex-shrink-0" />
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-xs text-slate-400 leading-relaxed flex items-start gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-400 mt-0.5 flex-shrink-0" />
                     <div>
-                      <span className="text-violet-400 font-medium">Pacing Advice:</span>{" "}
+                      <span className="text-indigo-400 font-medium">Pacing Advice:</span>{" "}
                       {editingTask.description}
                     </div>
                   </div>
@@ -923,12 +923,12 @@ export function CalendarView() {
                         completed: !editingTask.completed,
                       });
                     }}
-                    className="flex items-center gap-2 text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+                    className="flex items-center gap-2 text-xs text-slate-300 hover:text-slate-100 transition-colors"
                   >
                     {editingTask.completed ? (
                       <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                     ) : (
-                      <Circle className="w-4 h-4 text-zinc-600" />
+                      <Circle className="w-4 h-4 text-slate-600" />
                     )}
                     <span>
                       {editingTask.completed ? "Mark Incomplete" : "Mark Done"}
@@ -941,7 +941,7 @@ export function CalendarView() {
                       removeTask(editingTask.id);
                       setEditingTask(null);
                     }}
-                    className="text-zinc-500 hover:text-rose-400 text-xs flex items-center gap-1 transition-colors"
+                    className="text-slate-400 hover:text-rose-400 text-xs flex items-center gap-1 transition-colors"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     Delete

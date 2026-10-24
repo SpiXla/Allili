@@ -4,17 +4,18 @@
 
 @layer base {
   :root {
-    --background: #09090b;
-    --foreground: #f4f4f5;
-    --surface-100: #09090b;
-    --surface-200: #0f0f13;
-    --surface-300: #16161d;
-    --surface-400: #1f1f28;
-    --surface-500: #2a2a36;
-    --muted: #71717a;
-    --muted-foreground: #a1a1aa;
-    --accent: #8b5cf6;
-    --neon: #38bdf8;
+    --background: #06070a;
+    --foreground: #f8fafc;
+    --surface-50: #0a0c13;
+    --surface-100: #0e111a;
+    --surface-200: #141824;
+    --surface-300: #1b2030;
+    --surface-400: #252b40;
+    --muted: #64748b;
+    --muted-foreground: #94a3b8;
+    --accent: #6366f1;
+    --neon-cyan: #06b6d4;
+    --neon-pink: #ec4899;
   }
 
   html {
@@ -31,8 +32,8 @@
 
   /* Sleek minimalist scrollbar */
   ::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
@@ -45,54 +46,63 @@
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.22);
   }
 
   ::selection {
-    background: rgba(139, 92, 246, 0.35);
+    background: rgba(99, 102, 241, 0.4);
     color: #ffffff;
   }
 }
 
 @layer components {
-  /* Minimal glass surface */
+  /* Ultra-luxe dark glass surfaces */
   .panel-surface {
-    @apply bg-[#0f0f13]/80 backdrop-blur-xl border border-white/[0.07];
+    @apply bg-[#0e111a]/85 backdrop-blur-2xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.5)];
   }
 
   .card-surface {
-    @apply bg-[#14141a]/90 backdrop-blur-md border border-white/[0.08] hover:border-white/[0.16] transition-all;
+    @apply bg-gradient-to-b from-[#141824]/90 to-[#0e111a]/95 backdrop-blur-xl border border-white/[0.08] hover:border-white/[0.18] transition-all;
   }
 
-  /* Minimalist button with glow on hover */
+  /* Iridescent high-impact action button */
   .btn-primary {
     @apply relative inline-flex items-center justify-center px-4 py-2.5 rounded-xl font-medium text-xs tracking-wide
-           bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white
-           shadow-[0_0_20px_rgba(139,92,246,0.25)]
-           hover:shadow-[0_0_30px_rgba(139,92,246,0.45)] hover:scale-[1.01]
-           active:scale-[0.98] transition-all duration-200 ease-out;
+           bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white
+           shadow-[0_0_24px_rgba(99,102,241,0.3)]
+           hover:shadow-[0_0_36px_rgba(99,102,241,0.55)] hover:scale-[1.01]
+           active:scale-[0.98] transition-all duration-200 ease-out border border-white/20;
   }
 
   .btn-secondary {
     @apply inline-flex items-center justify-center px-3.5 py-2 rounded-xl text-xs font-medium
            bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white
-           border border-white/[0.08] hover:border-white/[0.16]
+           border border-white/[0.08] hover:border-white/[0.18]
            transition-all duration-150;
   }
 
-  /* Minimalist input field */
+  /* Shimmering prompt optimization pill button */
+  .btn-optimize {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium
+           bg-gradient-to-r from-indigo-500/15 via-purple-500/15 to-pink-500/15
+           hover:from-indigo-500/25 hover:via-purple-500/25 hover:to-pink-500/25
+           text-indigo-200 hover:text-white border border-indigo-500/30 hover:border-indigo-400/60
+           transition-all duration-150 shadow-[0_0_12px_rgba(99,102,241,0.15)];
+  }
+
+  /* Clean glass input */
   .clean-input {
     @apply w-full px-3.5 py-2.5 rounded-xl text-xs text-zinc-100 placeholder:text-zinc-500
-           bg-white/[0.03] border border-white/[0.08]
-           focus:outline-none focus:border-violet-500/60 focus:ring-2 focus:ring-violet-500/20
+           bg-[#090b12] border border-white/[0.08]
+           focus:outline-none focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/20
            transition-all duration-150;
   }
 
-  /* Subtle grid pattern background */
+  /* Radial ambient glow pattern */
   .bg-grid-pattern {
     background-size: 32px 32px;
     background-image: 
-      linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
   }
 }

@@ -31,7 +31,7 @@ export function ExportCalendarButton() {
 
   return (
     <>
-      {/* ── Minimalist Export Button ── */}
+      {/* ── Cyber-Luxe Export Button ── */}
       <motion.button
         id="export-calendar-btn"
         onClick={handleExport}
@@ -40,11 +40,11 @@ export function ExportCalendarButton() {
         whileTap={{ scale: 0.98 }}
         className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium
                    bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white
-                   border border-white/[0.08] hover:border-white/[0.16]
+                   border border-white/[0.08] hover:border-indigo-500/30
                    transition-all duration-150 shadow-sm
                    disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        <Calendar className="w-3.5 h-3.5 text-violet-400" />
+        <Calendar className="w-3.5 h-3.5 text-indigo-400" />
         <span>Export .ics</span>
       </motion.button>
 
@@ -57,8 +57,8 @@ export function ExportCalendarButton() {
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
             className="fixed bottom-6 right-6 z-50 flex items-center gap-3
-                       px-4 py-3 rounded-xl bg-[#121218]/95
-                       border border-white/[0.12] shadow-2xl backdrop-blur-xl"
+                       px-4 py-3 rounded-xl bg-[#0c101a]/95
+                       border border-emerald-500/30 shadow-[0_10px_35px_rgba(0,0,0,0.8),0_0_20px_rgba(16,185,129,0.15)] backdrop-blur-xl"
           >
             <div className="w-6 h-6 rounded-md bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center flex-shrink-0">
               <Check className="w-3.5 h-3.5 text-emerald-400" />
@@ -68,7 +68,7 @@ export function ExportCalendarButton() {
               <span className="text-xs font-medium text-zinc-100">
                 Schedule Exported
               </span>
-              <span className="text-[11px] font-mono text-zinc-500">
+              <span className="text-[11px] font-mono text-zinc-400">
                 allili-schedule.ics
               </span>
             </div>
