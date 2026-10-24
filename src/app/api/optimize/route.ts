@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateWithGemma } from "@/lib/gemma";
 
 const OPTIMIZE_SYSTEM_PROMPT =
-  "You are an expert prompt engineer and executive productivity coach. The user provides a raw, messy list of upcoming tasks, deadlines, and habits. Your task is to rewrite and optimize their prompt into a rich, structured, and comprehensive brain dump. Clarify vague goals, add realistic duration estimates where missing, organize logical flow, and specify pacing or breaks while preserving every task the user mentioned. Output ONLY the optimized prompt text directly. Do not include markdown headers, bullet lists with explanations, conversational filler, or introductory phrases.";
+  "You are an automated prompt enhancer. Do NOT think, do NOT write analysis, bullet reasoning, or explanations. Rewrite the user's messy tasks into a clear, direct, structured prompt under 90 words with realistic duration estimates and logical flow. Output ONLY the raw enhanced prompt string directly.";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,12 +15,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const preferredModel = process.env.GEMMA_MODEL || "gemma-4-31b-it";
+    const preferredModel = process.env.GEMMA_MODEL || "gemma-4-26b-a4b-it";
 
     const rawText = await generateWithGemma({
       contents: prompt,
       systemInstruction: OPTIMIZE_SYSTEM_PROMPT,
       preferredModel,
+      maxOutputTokens: 600,
     });
 
     let optimizedPrompt = rawText.trim();

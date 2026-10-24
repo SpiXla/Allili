@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useMemo } from "react";
+import { useRef, useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
@@ -114,10 +114,28 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [previousPrompt, setPreviousPrompt] = useState<string | null>(null);
+  const [loadingStep, setLoadingStep] = useState(0);
 
   const userInput = useScheduleStore((s) => s.userInput);
   const setUserInput = useScheduleStore((s) => s.setUserInput);
   const isLoading = useScheduleStore((s) => s.isLoading);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadingStep(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setLoadingStep((s) => (s + 1) % 3);
+    }, 3200);
+    return () => clearInterval(interval);
+  }, [isLoading]);
+
+  const loadingMessages = [
+    "Synthesizing tasks with Gemma 4…",
+    "Calibrating focus and rest blocks…",
+    "Finalizing visual time grid…",
+  ];
   const setIsLoading = useScheduleStore((s) => s.setIsLoading);
   const timelineData = useScheduleStore((s) => s.timelineData);
   const setTimelineData = useScheduleStore((s) => s.setTimelineData);
@@ -444,8 +462,10 @@ export default function Home() {
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Generating schedule…
+                  <Loader2 className="w-4 h-4 animate-spin mr-2 text-violet-400" />
+                  <span className="text-zinc-200 transition-all duration-300">
+                    {loadingMessages[loadingStep]}
+                  </span>
                 </>
               ) : (
                 <>

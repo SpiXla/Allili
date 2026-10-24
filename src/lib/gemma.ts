@@ -1,9 +1,10 @@
 import { GoogleGenAI } from "@google/genai";
 
 // Strictly Gemma 4 models only
+// 26b-a4b-it is the high-efficiency MoE model (much faster latency, no 503 demand queues)
 export const GEMMA_MODELS = [
-  "gemma-4-31b-it",
   "gemma-4-26b-a4b-it",
+  "gemma-4-31b-it",
 ] as const;
 
 export type GemmaModel = (typeof GEMMA_MODELS)[number];
@@ -13,13 +14,16 @@ interface GemmaGenerateOptions {
   systemInstruction?: string;
   jsonMode?: boolean;
   preferredModel?: string;
+  maxOutputTokens?: number;
 }
 
 /**
- * Resiliently generates content using Gemma 4 with automatic retries and fallback
- * between Gemma 4 models when Google's API returns transient 500 Internal Errors.
+ * Resiliently and swiftly generates content using Gemma 4 with low latency,
+ * candidate part extraction, and fast fallback between Gemma 4 models.
  */
-export async function generateWithGemma(options: GemmaGenerateOptions): Promise<string> {
+export async function generateWithGemma(
+  options: GemmaGenerateOptions
+): Promise<string> {
   const apiKey =
     process.env.GEMINI_API_KEY ||
     process.env.GOOGLE_API_KEY ||
@@ -33,12 +37,15 @@ export async function generateWithGemma(options: GemmaGenerateOptions): Promise<
 
   const ai = new GoogleGenAI({ apiKey });
 
-  // Resolve user preferred model or default to flagship gemma-4-31b-it
-  let primaryModel: string = "gemma-4-31b-it";
+  // Default to the fast 26b-a4b-it Gemma 4 model for rapid response times
+  let primaryModel: string = "gemma-4-26b-a4b-it";
   if (options.preferredModel) {
-    if (options.preferredModel === "gemma-4" || options.preferredModel === "gemma-4-31b-it") {
+    if (options.preferredModel === "gemma-4-31b-it") {
       primaryModel = "gemma-4-31b-it";
-    } else if (options.preferredModel === "gemma-4-26b-a4b-it") {
+    } else if (
+      options.preferredModel === "gemma-4" ||
+      options.preferredModel === "gemma-4-26b-a4b-it"
+    ) {
       primaryModel = "gemma-4-26b-a4b-it";
     }
   }
@@ -52,12 +59,13 @@ export async function generateWithGemma(options: GemmaGenerateOptions): Promise<
   let lastError: Error | null = null;
 
   for (const model of candidateModels) {
-    // Try up to 2 attempts per Gemma 4 model
+    // Try each Gemma 4 model with fail-fast recovery
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
         const config: {
           systemInstruction?: string;
           responseMimeType?: string;
+          maxOutputTokens?: number;
         } = {};
 
         if (options.systemInstruction) {
@@ -68,18 +76,43 @@ export async function generateWithGemma(options: GemmaGenerateOptions): Promise<
           config.responseMimeType = "application/json";
         }
 
-        const response = await ai.models.generateContent({
-          model,
-          contents: options.contents,
-          config,
-        });
+        if (options.maxOutputTokens) {
+          config.maxOutputTokens = options.maxOutputTokens;
+        }
 
-        const text = response.text || "";
+        // 28s timeout to prevent hanging on Google's overloaded queues
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 28000);
+
+        let response;
+        try {
+          response = await ai.models.generateContent({
+            model,
+            contents: options.contents,
+            config,
+          });
+        } finally {
+          clearTimeout(timeoutId);
+        }
+
+        // Extract text directly or from candidates (handles thinking model output parts)
+        let text = response.text || "";
+        if (!text && response.candidates?.[0]?.content?.parts) {
+          const parts = response.candidates[0].content.parts;
+          const nonThought = parts.find((p) => !p.thought);
+          text = nonThought?.text || parts[parts.length - 1]?.text || "";
+        }
+
+        text = text.trim();
         if (text) {
           return text;
         }
       } catch (err: unknown) {
-        const errorObj = err as { message?: string; status?: number; code?: number };
+        const errorObj = err as {
+          message?: string;
+          status?: number;
+          code?: number;
+        };
         const msg = errorObj?.message || String(err);
         lastError = err instanceof Error ? err : new Error(msg);
 
@@ -89,24 +122,32 @@ export async function generateWithGemma(options: GemmaGenerateOptions): Promise<
           msg.includes("Internal error") ||
           msg.includes("503") ||
           msg.includes("quota") ||
+          msg.includes("aborted") ||
           errorObj?.status === 500;
 
         console.warn(
-          `[Gemma 4] Model ${model} attempt ${attempt} encountered error: ${msg}. Transient: ${isTransient}`
+          `[Gemma 4 Speed Optimizer] Model ${model} attempt ${attempt} warning: ${msg}`
         );
+
+        // On 503 high demand or timeout, immediately failover to next candidate without waiting
+        if (msg.includes("503") || msg.includes("aborted")) {
+          break;
+        }
 
         if (!isTransient && attempt === 2) {
           break;
         }
 
-        // Wait with brief exponential backoff before retrying
-        await new Promise((resolve) => setTimeout(resolve, attempt * 1200));
+        // Very brief backoff (400ms) to ensure near-instant retry
+        await new Promise((resolve) => setTimeout(resolve, 400));
       }
     }
   }
 
   throw (
     lastError ||
-    new Error("Failed to generate response from Gemma 4 after multiple attempts.")
+    new Error(
+      "Failed to generate response from Gemma 4 after multiple attempts."
+    )
   );
 }

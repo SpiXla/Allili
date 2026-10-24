@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateWithGemma } from "@/lib/gemma";
 
 const SYSTEM_PROMPT =
-  'You are an elite productivity AI. The user will provide a messy list of projects, deadlines, and habits. Analyze the scope of the tasks and deadlines to intelligently determine whether a single-day or multi-day weekly schedule is more appropriate. Break the tasks down into a stress-free schedule spanning that inferred timeframe. You MUST output ONLY a raw JSON array. Schema: { "id": "uuid", "title": "string", "duration_minutes": number, "date": "YYYY-MM-DD", "start_time": "HH:MM", "category": "work" | "break" | "routine", "advice": "short string" }.';
+  'You are an automated API schedule generator. Do NOT think, do NOT write notes, thoughts, or analysis. Intelligently determine whether a single-day or multi-day schedule is appropriate based on task scope. Output ONLY the raw JSON array string starting with [ and ending with ]. Schema: [{"id": "uuid", "title": "string", "duration_minutes": number, "date": "YYYY-MM-DD", "start_time": "HH:MM", "category": "work" | "break" | "routine", "advice": "short string"}].';
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,13 +15,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const preferredModel = process.env.GEMMA_MODEL || "gemma-4-31b-it";
+    const preferredModel = process.env.GEMMA_MODEL || "gemma-4-26b-a4b-it";
 
     const rawText = await generateWithGemma({
       contents: prompt,
       systemInstruction: SYSTEM_PROMPT,
       jsonMode: true,
       preferredModel,
+      maxOutputTokens: 2048,
     });
 
     // Parse the JSON array, cleaning any potential markdown code fences
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
     try {
       parsedData = JSON.parse(cleanedText);
     } catch {
-      // Fallback: attempt to find JSON array brackets if model prepended/appended text
+      // Fallback: extract JSON array brackets if model prepended/appended text
       const arrayMatch = cleanedText.match(/\[\s*\{[\s\S]*\}\s*\]/);
       if (arrayMatch) {
         parsedData = JSON.parse(arrayMatch[0]);
