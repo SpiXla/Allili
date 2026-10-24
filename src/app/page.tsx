@@ -188,6 +188,13 @@ export default function Home() {
     }
   };
 
+  const handleReset = () => {
+    resetStore();
+    setPreviousPrompt(null);
+    setIsOptimizing(false);
+    setErrorMessage(null);
+  };
+
   const handleGenerate = async () => {
     if (!userInput.trim() || isLoading) return;
 
@@ -254,19 +261,18 @@ export default function Home() {
 
         {/* Right Nav Actions */}
         <div className="flex items-center gap-3">
-          {hasTimeline && (
-            <>
-              <button
-                onClick={() => resetStore()}
-                className="text-zinc-400 hover:text-zinc-200 text-xs flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-white/[0.04] transition-all"
-                title="Reset schedule"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Reset</span>
-              </button>
-              <ExportCalendarButton />
-            </>
+          {(hasTimeline || userInput.trim() || previousPrompt) && (
+            <button
+              onClick={handleReset}
+              className="text-zinc-400 hover:text-zinc-200 text-xs flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-white/[0.04] transition-all"
+              title="Reset prompt and schedule"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Reset</span>
+            </button>
           )}
+
+          {hasTimeline && <ExportCalendarButton />}
 
           <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono text-zinc-400 bg-white/[0.03] px-2.5 py-1 rounded-lg border border-white/[0.06]">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -295,9 +301,21 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={handleRevertPrompt}
-                      className="text-[11px] font-mono text-zinc-500 hover:text-zinc-300 underline decoration-dotted transition-colors"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono text-violet-300 hover:text-violet-100 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20 transition-all"
+                      title="Revert to original unoptimized prompt"
                     >
-                      Undo
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Undo</span>
+                    </button>
+                  )}
+                  {userInput.trim() && (
+                    <button
+                      type="button"
+                      onClick={handleReset}
+                      className="text-[11px] font-mono text-zinc-500 hover:text-zinc-300 underline decoration-dotted transition-colors"
+                      title="Clear prompt and reset"
+                    >
+                      Clear
                     </button>
                   )}
                   <button
@@ -379,10 +397,19 @@ export default function Home() {
                       : "Empty"}
                   </span>
                   {previousPrompt && (
-                    <span className="text-violet-400 flex items-center gap-1 font-sans">
-                      <Sparkles className="w-3 h-3" />
-                      Optimized
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-violet-400 flex items-center gap-1 font-sans">
+                        <Sparkles className="w-3 h-3" />
+                        Optimized
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleRevertPrompt}
+                        className="text-zinc-500 hover:text-zinc-300 underline decoration-dotted transition-colors"
+                      >
+                        (undo)
+                      </button>
+                    </div>
                   )}
                 </div>
                 <span className="text-zinc-600">⌘ + Enter to run</span>
