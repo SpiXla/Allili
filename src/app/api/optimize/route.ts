@@ -1,5 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
+import { generateWithGemma } from "@/lib/gemma";
 
 const OPTIMIZE_SYSTEM_PROMPT =
   "You are an expert prompt engineer and executive productivity coach. The user provides a raw, messy list of upcoming tasks, deadlines, and habits. Your task is to rewrite and optimize their prompt into a rich, structured, and comprehensive brain dump. Clarify vague goals, add realistic duration estimates where missing, organize logical flow, and specify pacing or breaks while preserving every task the user mentioned. Output ONLY the optimized prompt text directly. Do not include markdown headers, bullet lists with explanations, conversational filler, or introductory phrases.";
@@ -15,40 +15,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const apiKey =
-      process.env.GEMINI_API_KEY ||
-      process.env.GOOGLE_API_KEY ||
-      process.env.API_KEY;
+    const preferredModel = process.env.GEMMA_MODEL || "gemma-4-31b-it";
 
-    if (!apiKey) {
-      return NextResponse.json(
-        {
-          error:
-            "Missing API key. Please configure GEMINI_API_KEY in your environment.",
-        },
-        { status: 500 }
-      );
-    }
-
-    const ai = new GoogleGenAI({ apiKey });
-
-    // Strictly use Gemma 4
-    const configuredModel = process.env.GEMMA_MODEL || "gemma-4-26b-a4b-it";
-    const model =
-      configuredModel === "gemma-4" ? "gemma-4-26b-a4b-it" : configuredModel;
-
-    const response = await ai.models.generateContent({
-      model,
+    const rawText = await generateWithGemma({
       contents: prompt,
-      config: {
-        systemInstruction: OPTIMIZE_SYSTEM_PROMPT,
-      },
+      systemInstruction: OPTIMIZE_SYSTEM_PROMPT,
+      preferredModel,
     });
 
-    const rawText = response.text?.trim() || "";
+    let optimizedPrompt = rawText.trim();
 
     // Clean any accidental markdown code fences or quotes
-    let optimizedPrompt = rawText;
     if (optimizedPrompt.startsWith("```")) {
       optimizedPrompt = optimizedPrompt
         .replace(/^```[a-z]*\s*/i, "")
@@ -63,13 +40,17 @@ export async function POST(req: NextRequest) {
       optimizedPrompt = optimizedPrompt.slice(1, -1).trim();
     }
 
-    return NextResponse.json({
-      originalPrompt: prompt,
-      optimizedPrompt: optimizedPrompt || prompt,
-    });
+    return NextResponse.json({ optimizedPrompt });
   } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : "Failed to optimize prompt.";
+    let message = "Failed to optimize prompt with Gemma 4.";
+    if (error instanceof Error) {
+      try {
+        const parsed = JSON.parse(error.message);
+        message = parsed?.error?.message || error.message;
+      } catch {
+        message = error.message;
+      }
+    }
     console.error("Error in /api/optimize:", error);
     return NextResponse.json({ error: message }, { status: 500 });
   }

@@ -1,5 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
+import { generateWithGemma } from "@/lib/gemma";
 
 const SYSTEM_PROMPT =
   'You are an elite productivity AI. The user will provide a messy list of projects, deadlines, and habits. Analyze the scope of the tasks and deadlines to intelligently determine whether a single-day or multi-day weekly schedule is more appropriate. Break the tasks down into a stress-free schedule spanning that inferred timeframe. You MUST output ONLY a raw JSON array. Schema: { "id": "uuid", "title": "string", "duration_minutes": number, "date": "YYYY-MM-DD", "start_time": "HH:MM", "category": "work" | "break" | "routine", "advice": "short string" }.';
@@ -15,37 +15,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const apiKey =
-      process.env.GEMINI_API_KEY ||
-      process.env.GOOGLE_API_KEY ||
-      process.env.API_KEY;
+    const preferredModel = process.env.GEMMA_MODEL || "gemma-4-31b-it";
 
-    if (!apiKey) {
-      return NextResponse.json(
-        {
-          error:
-            "Missing API key. Please configure GEMINI_API_KEY or GOOGLE_API_KEY in your environment.",
-        },
-        { status: 500 }
-      );
-    }
-
-    const ai = new GoogleGenAI({ apiKey });
-
-    const configuredModel = process.env.GEMMA_MODEL || "gemma-4-26b-a4b-it";
-    const model =
-      configuredModel === "gemma-4" ? "gemma-4-26b-a4b-it" : configuredModel;
-
-    const response = await ai.models.generateContent({
-      model,
+    const rawText = await generateWithGemma({
       contents: prompt,
-      config: {
-        systemInstruction: SYSTEM_PROMPT,
-        responseMimeType: "application/json",
-      },
+      systemInstruction: SYSTEM_PROMPT,
+      jsonMode: true,
+      preferredModel,
     });
-
-    const rawText = response.text || "";
 
     // Parse the JSON array, cleaning any potential markdown code fences
     let cleanedText = rawText.trim();
@@ -65,18 +42,22 @@ export async function POST(req: NextRequest) {
       if (arrayMatch) {
         parsedData = JSON.parse(arrayMatch[0]);
       } else {
-        throw new Error("Failed to parse valid JSON array from model output.");
+        throw new Error("Failed to parse valid JSON array from Gemma 4 output.");
       }
     }
 
     return NextResponse.json(parsedData);
   } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : "Failed to generate schedule";
+    let message = "Failed to generate schedule";
+    if (error instanceof Error) {
+      try {
+        const parsed = JSON.parse(error.message);
+        message = parsed?.error?.message || error.message;
+      } catch {
+        message = error.message;
+      }
+    }
     console.error("Error in /api/generate:", error);
-    return NextResponse.json(
-      { error: message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

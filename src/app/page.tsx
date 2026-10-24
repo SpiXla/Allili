@@ -92,6 +92,23 @@ function mapApiItemsToTasks(items: ApiTaskItem[]): Task[] {
   });
 }
 
+function formatErrorMessage(err: unknown, fallback: string): string {
+  if (!err) return fallback;
+  const raw = err instanceof Error ? err.message : String(err);
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed?.error?.message) {
+      return parsed.error.message;
+    }
+    if (parsed?.message) {
+      return parsed.message;
+    }
+  } catch {
+    // Not a JSON string
+  }
+  return raw || fallback;
+}
+
 export default function Home() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -156,9 +173,9 @@ export default function Home() {
         setUserInput(data.optimizedPrompt);
       }
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Failed to optimize prompt.";
-      setErrorMessage(message);
+      setErrorMessage(
+        formatErrorMessage(err, "Failed to optimize prompt with Gemma 4. Please try again.")
+      );
     } finally {
       setIsOptimizing(false);
     }
@@ -197,9 +214,9 @@ export default function Home() {
       const tasks = mapApiItemsToTasks(data);
       setTimelineData(tasks);
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "An unexpected error occurred.";
-      setErrorMessage(message);
+      setErrorMessage(
+        formatErrorMessage(err, "An unexpected error occurred while generating your schedule.")
+      );
     } finally {
       setIsLoading(false);
     }
