@@ -20,7 +20,8 @@ import {
 } from "lucide-react";
 import { useScheduleStore, type Task } from "@/store/useScheduleStore";
 
-const HOUR_HEIGHT = 76; // px per hour (comfortable breathing room)
+// 96px per hour ensures 15m = 24px, 30m = 48px, 60m = 96px
+const HOUR_HEIGHT = 96;
 
 /* ── Category styling config ── */
 interface CategoryStyle {
@@ -31,6 +32,7 @@ interface CategoryStyle {
   border: string;
   glow: string;
   cardBg: string;
+  dot: string;
   icon: typeof Briefcase;
 }
 
@@ -40,9 +42,10 @@ const categoryTheme: Record<string, CategoryStyle> = {
     stripe: "bg-violet-500",
     badgeBg: "bg-violet-500/15",
     badgeText: "text-violet-300",
-    border: "border-violet-500/20 hover:border-violet-500/40",
+    border: "border-violet-500/25 hover:border-violet-500/50",
     glow: "hover:shadow-[0_4px_24px_rgba(139,92,246,0.18)]",
     cardBg: "bg-gradient-to-br from-[#161424]/95 to-[#12111c]/95",
+    dot: "bg-violet-400",
     icon: Briefcase,
   },
   break: {
@@ -50,9 +53,10 @@ const categoryTheme: Record<string, CategoryStyle> = {
     stripe: "bg-emerald-400",
     badgeBg: "bg-emerald-500/15",
     badgeText: "text-emerald-300",
-    border: "border-emerald-500/20 hover:border-emerald-500/40",
+    border: "border-emerald-500/25 hover:border-emerald-500/50",
     glow: "hover:shadow-[0_4px_24px_rgba(16,185,129,0.18)]",
     cardBg: "bg-gradient-to-br from-[#121c17]/95 to-[#0e1612]/95",
+    dot: "bg-emerald-400",
     icon: Coffee,
   },
   routine: {
@@ -60,9 +64,10 @@ const categoryTheme: Record<string, CategoryStyle> = {
     stripe: "bg-sky-400",
     badgeBg: "bg-sky-500/15",
     badgeText: "text-sky-300",
-    border: "border-sky-500/20 hover:border-sky-500/40",
+    border: "border-sky-500/25 hover:border-sky-500/50",
     glow: "hover:shadow-[0_4px_24px_rgba(56,189,248,0.18)]",
     cardBg: "bg-gradient-to-br from-[#121824]/95 to-[#0e131c]/95",
+    dot: "bg-sky-400",
     icon: SunMedium,
   },
 };
@@ -75,6 +80,7 @@ const defaultTheme: CategoryStyle = {
   border: "border-zinc-700/30 hover:border-zinc-500/40",
   glow: "hover:shadow-[0_4px_20px_rgba(255,255,255,0.06)]",
   cardBg: "bg-gradient-to-br from-[#16161c]/95 to-[#121216]/95",
+  dot: "bg-zinc-400",
   icon: Clock,
 };
 
@@ -122,83 +128,81 @@ interface PositionedTask {
 }
 
 /**
- * Computes overlap-aware column positions so concurrent tasks sit side-by-side
+ * Computes pixel-accurate, collision-free layout for a day's tasks
  */
-function layoutDayTasks(
-  tasks: Task[],
-  startHour: number
-): PositionedTask[] {
+function layoutDayTasks(tasks: Task[], startHour: number): PositionedTask[] {
   if (!tasks.length) return [];
 
-  // 1. Convert tasks to numeric minute intervals
+  // 1. Convert each task to pixel coordinates
   const items = tasks.map((task) => {
     const [h, m] = (task.startTime || "09:00").split(":").map(Number);
     const startMins =
       (isNaN(h) ? 9 : h - startHour) * 60 + (isNaN(m) ? 0 : m);
-    const duration = Math.max(15, task.duration || 30);
-    const endMins = startMins + duration;
+    const duration = Math.max(10, task.duration || 30);
+
+    const topPx = (startMins / 60) * HOUR_HEIGHT;
+    // Exactly proportional height minus 3px gap for clean separation
+    const heightPx = Math.max(22, (duration / 60) * HOUR_HEIGHT - 3);
+    const bottomPx = topPx + heightPx;
 
     return {
       task,
       startMins,
-      endMins,
       duration,
+      topPx,
+      heightPx,
+      bottomPx,
       col: 0,
-      totalCols: 1,
     };
   });
 
-  // Sort by start time, then duration descending
-  items.sort((a, b) => a.startMins - b.startMins || b.duration - a.duration);
+  // Sort chronologically by start time, then duration descending
+  items.sort((a, b) => a.topPx - b.topPx || b.duration - a.duration);
 
-  // 2. Group into overlapping clusters
+  // 2. Group into clusters based on visual pixel overlap (with 2px buffer)
   const clusters: (typeof items)[] = [];
   let currentCluster: typeof items = [];
-  let clusterEnd = -1;
+  let clusterBottom = -1;
 
   for (const item of items) {
-    if (currentCluster.length === 0 || item.startMins < clusterEnd) {
+    if (currentCluster.length === 0 || item.topPx < clusterBottom - 2) {
       currentCluster.push(item);
-      clusterEnd = Math.max(clusterEnd, item.endMins);
+      clusterBottom = Math.max(clusterBottom, item.bottomPx);
     } else {
       clusters.push(currentCluster);
       currentCluster = [item];
-      clusterEnd = item.endMins;
+      clusterBottom = item.bottomPx;
     }
   }
   if (currentCluster.length > 0) {
     clusters.push(currentCluster);
   }
 
-  // 3. For each cluster, assign collision-free sub-columns
+  // 3. In each cluster, assign sub-columns so overlapping cards sit side-by-side
   const positioned: PositionedTask[] = [];
 
   for (const cluster of clusters) {
-    const colEnds: number[] = [];
+    const colBottoms: number[] = [];
 
     for (const item of cluster) {
-      // Find first column where item doesn't collide
       let col = 0;
-      while (col < colEnds.length && colEnds[col] > item.startMins) {
+      while (col < colBottoms.length && colBottoms[col] > item.topPx + 2) {
         col++;
       }
-      colEnds[col] = item.endMins;
+      colBottoms[col] = item.bottomPx;
       item.col = col;
     }
 
-    const totalCols = Math.max(1, colEnds.length);
+    const totalCols = Math.max(1, colBottoms.length);
 
     for (const item of cluster) {
-      const topPx = (item.startMins / 60) * HOUR_HEIGHT;
-      // Minimum height of 42px ensures readability of title and time
-      const heightPx = Math.max(42, (item.duration / 60) * HOUR_HEIGHT - 4);
       const widthPercent = 100 / totalCols;
       const leftPercent = item.col * widthPercent;
 
       positioned.push({
         task: item.task,
-        topPx,
-        heightPx,
+        topPx: item.topPx,
+        heightPx: item.heightPx,
         leftPercent,
         widthPercent,
       });
@@ -310,16 +314,25 @@ export function CalendarView() {
   const totalGridHeight = (endHour - startHour) * HOUR_HEIGHT;
   const isSingleDay = dateColumns.length === 1;
 
+  // Minimum column width of 240px ensures multi-day plans never cramp text
+  const columnWidth = isSingleDay ? "100%" : "250px";
+  const minCanvasWidth = isSingleDay
+    ? "100%"
+    : `${dateColumns.length * 250 + 64}px`;
+
   return (
     <div className="flex flex-col h-full w-full select-none">
       {/* ── Subheader / View Controller ── */}
-      <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/[0.06]">
+      <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/[0.06] flex-shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-zinc-300">
-            {dateColumns.length === 1 ? "Daily View" : `${dateColumns.length} Days Planned`}
+            {dateColumns.length === 1
+              ? "Daily Plan"
+              : `${dateColumns.length} Days Planned`}
           </span>
           <span className="text-[11px] font-mono text-zinc-500">
-            ({startHour.toString().padStart(2, "0")}:00 – {endHour.toString().padStart(2, "0")}:00)
+            ({startHour.toString().padStart(2, "0")}:00 –{" "}
+            {endHour.toString().padStart(2, "0")}:00)
           </span>
         </div>
 
@@ -354,9 +367,8 @@ export function CalendarView() {
       {viewMode === "grid" && (
         <div className="relative flex-1 overflow-x-auto overflow-y-auto rounded-2xl bg-[#0a0a0f] border border-white/[0.08] shadow-2xl">
           <div
-            className={`min-w-[620px] ${
-              isSingleDay ? "max-w-2xl mx-auto" : "w-full"
-            }`}
+            style={{ minWidth: minCanvasWidth }}
+            className={isSingleDay ? "max-w-2xl mx-auto w-full" : "w-full"}
           >
             {/* ── Sticky Date Header ── */}
             <div className="sticky top-0 z-30 flex border-b border-white/[0.08] bg-[#0c0c12]/95 backdrop-blur-xl">
@@ -369,9 +381,7 @@ export function CalendarView() {
               <div
                 className="flex-1 grid"
                 style={{
-                  gridTemplateColumns: `repeat(${dateColumns.length}, minmax(${
-                    isSingleDay ? "100%" : "260px"
-                  }, 1fr))`,
+                  gridTemplateColumns: `repeat(${dateColumns.length}, minmax(${columnWidth}, 1fr))`,
                 }}
               >
                 {dateColumns.map((colDate) => {
@@ -424,7 +434,7 @@ export function CalendarView() {
                       style={{ top: `${topPx}px` }}
                       className="absolute left-0 right-0 -translate-y-1/2 pr-3 text-right"
                     >
-                      <span className="text-[10px] font-mono font-medium text-zinc-500">
+                      <span className="text-[11px] font-mono font-medium text-zinc-400">
                         {timeStr}
                       </span>
                     </div>
@@ -436,9 +446,7 @@ export function CalendarView() {
               <div
                 className="flex-1 grid relative"
                 style={{
-                  gridTemplateColumns: `repeat(${dateColumns.length}, minmax(${
-                    isSingleDay ? "100%" : "260px"
-                  }, 1fr))`,
+                  gridTemplateColumns: `repeat(${dateColumns.length}, minmax(${columnWidth}, 1fr))`,
                 }}
               >
                 {/* Horizontal Grid Lines */}
@@ -450,13 +458,13 @@ export function CalendarView() {
                         {/* Major hour line */}
                         <div
                           style={{ top: `${topPx}px` }}
-                          className="absolute left-0 right-0 border-t border-white/[0.04]"
+                          className="absolute left-0 right-0 border-t border-white/[0.06]"
                         />
                         {/* Minor half-hour dashed line */}
                         {idx < hours.length - 1 && (
                           <div
                             style={{ top: `${topPx + HOUR_HEIGHT / 2}px` }}
-                            className="absolute left-0 right-0 border-t border-dashed border-white/[0.02]"
+                            className="absolute left-0 right-0 border-t border-dashed border-white/[0.03]"
                           />
                         )}
                       </div>
@@ -478,8 +486,11 @@ export function CalendarView() {
                           const theme =
                             categoryTheme[task.category?.toLowerCase()] ||
                             defaultTheme;
-                          const isCompact = heightPx < 52;
-                          const isMedium = heightPx >= 52 && heightPx < 85;
+
+                          // 3 distinct rendering modes based on exact height
+                          const isPill = heightPx < 36; // 15m tasks / short breaks
+                          const isCompact = heightPx >= 36 && heightPx < 70; // 30m tasks
+                          const isStandard = heightPx >= 70; // 45m+ tasks
 
                           return (
                             <motion.div
@@ -492,16 +503,16 @@ export function CalendarView() {
                               style={{
                                 top: `${topPx}px`,
                                 height: `${heightPx}px`,
-                                left: `calc(${leftPercent}% + 6px)`,
-                                width: `calc(${widthPercent}% - 12px)`,
+                                left: `calc(${leftPercent}% + 4px)`,
+                                width: `calc(${widthPercent}% - 8px)`,
                               }}
                               className={`absolute rounded-xl border backdrop-blur-md
                                          cursor-pointer transition-all duration-200
-                                         flex flex-col justify-between overflow-hidden group
-                                         shadow-lg ${theme.cardBg} ${theme.border} ${theme.glow}
+                                         overflow-hidden group shadow-md
+                                         ${theme.cardBg} ${theme.border} ${theme.glow}
                                          ${
                                            task.completed
-                                             ? "opacity-40 grayscale-[40%]"
+                                             ? "opacity-35 grayscale-[50%]"
                                              : ""
                                          }`}
                             >
@@ -510,37 +521,22 @@ export function CalendarView() {
                                 className={`absolute left-0 top-0 bottom-0 w-1 ${theme.stripe}`}
                               />
 
-                              {/* Card Content: Adaptive Layout based on height */}
-                              {isCompact ? (
-                                /* Compact single-row layout (<52px) */
-                                <div className="h-full pl-3 pr-2 flex items-center justify-between gap-2">
+                              {/* ── Mode 1: Sleek Event Pill (<36px, e.g. 15-min break) ── */}
+                              {isPill && (
+                                <div className="h-full pl-3 pr-2 flex items-center justify-between gap-1.5">
                                   <div className="flex items-center gap-1.5 min-w-0">
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        toggleTaskCompleted(task.id);
-                                      }}
-                                      className="text-zinc-500 hover:text-emerald-400 transition-colors flex-shrink-0"
-                                    >
-                                      {task.completed ? (
-                                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                                      ) : (
-                                        <Circle className="w-3.5 h-3.5 text-zinc-600 group-hover:text-zinc-400" />
-                                      )}
-                                    </button>
+                                    <div
+                                      className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${theme.dot}`}
+                                    />
                                     <span
-                                      className={`text-xs font-medium truncate text-zinc-100 ${
-                                        task.completed
-                                          ? "line-through text-zinc-500"
-                                          : ""
+                                      className={`text-[11px] font-medium truncate text-zinc-100 ${
+                                        task.completed ? "line-through text-zinc-500" : ""
                                       }`}
                                     >
                                       {task.title}
                                     </span>
                                   </div>
-
-                                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  <div className="flex items-center gap-1 flex-shrink-0">
                                     <span className="text-[10px] font-mono text-zinc-400">
                                       {task.startTime}
                                     </span>
@@ -549,18 +545,20 @@ export function CalendarView() {
                                     </span>
                                   </div>
                                 </div>
-                              ) : isMedium ? (
-                                /* Medium dual-row layout (52px - 85px) */
-                                <div className="h-full p-2.5 pl-3.5 flex flex-col justify-between">
+                              )}
+
+                              {/* ── Mode 2: Compact Card (36px - 70px, e.g. 30-min task) ── */}
+                              {isCompact && (
+                                <div className="h-full p-2 pl-3 flex flex-col justify-between">
                                   <div className="flex items-start justify-between gap-1.5">
-                                    <div className="flex items-start gap-1.5 min-w-0">
+                                    <div className="flex items-center gap-1.5 min-w-0">
                                       <button
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           toggleTaskCompleted(task.id);
                                         }}
-                                        className="text-zinc-500 hover:text-emerald-400 transition-colors mt-0.5 flex-shrink-0"
+                                        className="text-zinc-500 hover:text-emerald-400 transition-colors flex-shrink-0"
                                       >
                                         {task.completed ? (
                                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -569,10 +567,8 @@ export function CalendarView() {
                                         )}
                                       </button>
                                       <span
-                                        className={`text-xs font-semibold text-zinc-100 line-clamp-1 ${
-                                          task.completed
-                                            ? "line-through text-zinc-500"
-                                            : ""
+                                        className={`text-xs font-semibold text-zinc-100 truncate ${
+                                          task.completed ? "line-through text-zinc-500" : ""
                                         }`}
                                       >
                                         {task.title}
@@ -583,23 +579,25 @@ export function CalendarView() {
                                     </span>
                                   </div>
 
-                                  <div className="flex items-center justify-between gap-2 pt-1">
+                                  <div className="flex items-center justify-between gap-2 pt-0.5">
                                     <span
-                                      className={`text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded ${theme.badgeBg} ${theme.badgeText}`}
+                                      className={`text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.2 rounded ${theme.badgeBg} ${theme.badgeText}`}
                                     >
                                       {task.category || "routine"}
                                     </span>
                                     <span className="text-[10px] font-mono text-zinc-400">
-                                      {task.duration} mins
+                                      {task.duration}m
                                     </span>
                                   </div>
                                 </div>
-                              ) : (
-                                /* Large multi-row layout (>85px) */
-                                <div className="h-full p-3 pl-4 flex flex-col justify-between">
+                              )}
+
+                              {/* ── Mode 3: Standard / Expanded Card (>=70px, e.g. 45–90+ mins) ── */}
+                              {isStandard && (
+                                <div className="h-full p-3 pl-3.5 flex flex-col justify-between">
                                   <div>
-                                    <div className="flex items-start justify-between gap-2 mb-1">
-                                      <div className="flex items-start gap-2 min-w-0">
+                                    <div className="flex items-start justify-between gap-1.5 mb-1">
+                                      <div className="flex items-start gap-1.5 min-w-0">
                                         <button
                                           type="button"
                                           onClick={(e) => {
@@ -609,17 +607,15 @@ export function CalendarView() {
                                           className="text-zinc-500 hover:text-emerald-400 transition-colors mt-0.5 flex-shrink-0"
                                         >
                                           {task.completed ? (
-                                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                                           ) : (
-                                            <Circle className="w-4 h-4 text-zinc-600 group-hover:text-zinc-400" />
+                                            <Circle className="w-3.5 h-3.5 text-zinc-600 group-hover:text-zinc-400" />
                                           )}
                                         </button>
                                         <div>
                                           <h4
-                                            className={`text-xs font-bold text-zinc-100 line-clamp-2 ${
-                                              task.completed
-                                                ? "line-through text-zinc-500"
-                                                : ""
+                                            className={`text-xs font-bold text-zinc-100 line-clamp-2 leading-snug ${
+                                              task.completed ? "line-through text-zinc-500" : ""
                                             }`}
                                           >
                                             {task.title}
@@ -632,14 +628,14 @@ export function CalendarView() {
                                       </div>
                                     </div>
 
-                                    {task.description && (
-                                      <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed pl-6 mt-1">
+                                    {task.description && heightPx >= 95 && (
+                                      <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed pl-5 mt-1">
                                         {task.description}
                                       </p>
                                     )}
                                   </div>
 
-                                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/[0.04]">
+                                  <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-white/[0.04]">
                                     <span
                                       className={`text-[9px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded ${theme.badgeBg} ${theme.badgeText}`}
                                     >
