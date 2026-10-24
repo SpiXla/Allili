@@ -2,12 +2,6 @@
 
 Allili turns a free-form list of tasks, deadlines, and habits into a time-blocked schedule using Google's Gemma 4 models.
 
-## Demo and Screenshots
-
-- **Live demo:** TODO - add the deployed app URL.
-- **Planner screenshot:** TODO - add `docs/screenshots/planner.png`.
-- **Generated schedule screenshot:** TODO - add `docs/screenshots/schedule.png`.
-
 ## Tech Stack
 
 - Next.js 14 and React 18
