@@ -102,9 +102,18 @@ function formatDateHeader(dateStr: string): {
         d.getMonth() === now.getMonth() &&
         d.getFullYear() === now.getFullYear();
 
+      const tomorrow = new Date(now);
+      tomorrow.setDate(now.getDate() + 1);
+      const isTomorrow =
+        d.getDate() === tomorrow.getDate() &&
+        d.getMonth() === tomorrow.getMonth() &&
+        d.getFullYear() === tomorrow.getFullYear();
+
       return {
         dayName: isToday
           ? "Today"
+          : isTomorrow
+          ? "Tomorrow"
           : d.toLocaleDateString("en-US", { weekday: "short" }),
         formattedDate: d.toLocaleDateString("en-US", {
           month: "short",

@@ -13,8 +13,20 @@ import {
   Zap,
   Wand2,
   Cpu,
+  Calendar as CalendarIcon,
+  Check,
+  Sunrise,
+  Utensils,
+  Dumbbell,
+  Moon,
+  Coffee,
+  SlidersHorizontal,
 } from "lucide-react";
-import { useScheduleStore, type Task } from "@/store/useScheduleStore";
+import {
+  useScheduleStore,
+  type Task,
+  type UserPreferences,
+} from "@/store/useScheduleStore";
 import { TimelineSkeleton } from "@/components/TimelineSkeleton";
 import { CalendarView } from "@/components/CalendarView";
 import { ExportCalendarButton } from "@/components/ExportCalendarButton";
@@ -56,7 +68,10 @@ const INSPIRATION_PROMPTS = [
   },
 ];
 
-function mapApiItemsToTasks(items: ApiTaskItem[]): Task[] {
+function mapApiItemsToTasks(
+  items: ApiTaskItem[],
+  defaultDate: string
+): Task[] {
   return items.map((item, index) => {
     const startTime = item.start_time || item.startTime || "09:00";
     const duration = Number(item.duration_minutes || item.duration || 30);
@@ -99,7 +114,7 @@ function mapApiItemsToTasks(items: ApiTaskItem[]): Task[] {
       description: item.advice || item.description || "",
       startTime,
       endTime,
-      date: item.date,
+      date: item.date || defaultDate,
       duration,
       priority,
       category: item.category || "routine",
@@ -129,6 +144,7 @@ export default function Home() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [showOptimizeModal, setShowOptimizeModal] = useState(false);
   const [previousPrompt, setPreviousPrompt] = useState<string | null>(null);
   const [loadingStep, setLoadingStep] = useState(0);
 
@@ -138,7 +154,37 @@ export default function Home() {
   const setIsLoading = useScheduleStore((s) => s.setIsLoading);
   const timelineData = useScheduleStore((s) => s.timelineData);
   const setTimelineData = useScheduleStore((s) => s.setTimelineData);
+  const preferences = useScheduleStore((s) => s.preferences);
+  const setPreferences = useScheduleStore((s) => s.setPreferences);
   const resetStore = useScheduleStore((s) => s.reset);
+
+  // Local state for the optimization preferences form inside the modal
+  const [formPrefs, setFormPrefs] = useState<UserPreferences>(preferences);
+
+  // Sync store preferences into form when modal opens
+  useEffect(() => {
+    if (showOptimizeModal) {
+      setFormPrefs(preferences);
+    }
+  }, [showOptimizeModal, preferences]);
+
+  // Current date info based on user's real local time
+  const { currentDate, dayOfWeek, formattedToday } = useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return {
+      currentDate: `${y}-${m}-${d}`,
+      dayOfWeek: now.toLocaleDateString("en-US", { weekday: "long" }),
+      formattedToday: now.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }),
+    };
+  }, []);
 
   useEffect(() => {
     if (!isLoading) {
@@ -183,9 +229,24 @@ export default function Home() {
     };
   }, [timelineData]);
 
-  const handleOptimizePrompt = async () => {
+  // Handle clicking the "Optimize Prompt" button: Ask user for preferences via modal
+  const handleOpenOptimizeModal = () => {
+    if (!userInput.trim()) {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
+      return;
+    }
+    setShowOptimizeModal(true);
+  };
+
+  // Submit preferences and execute prompt optimization
+  const handleExecuteOptimization = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!userInput.trim() || isOptimizing || isLoading) return;
 
+    // Save preferences in global store so they persist
+    setPreferences(formPrefs);
     setIsOptimizing(true);
     setErrorMessage(null);
 
@@ -193,7 +254,12 @@ export default function Home() {
       const res = await fetch("/api/optimize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: userInput }),
+        body: JSON.stringify({
+          prompt: userInput,
+          preferences: formPrefs,
+          currentDate,
+          dayOfWeek,
+        }),
       });
 
       const data = await res.json();
@@ -205,6 +271,7 @@ export default function Home() {
       if (data.optimizedPrompt) {
         setPreviousPrompt(userInput);
         setUserInput(data.optimizedPrompt);
+        setShowOptimizeModal(false);
       }
     } catch (err: unknown) {
       setErrorMessage(
@@ -230,6 +297,7 @@ export default function Home() {
     setPreviousPrompt(null);
     setIsOptimizing(false);
     setErrorMessage(null);
+    setShowOptimizeModal(false);
   };
 
   const handleGenerate = async () => {
@@ -242,7 +310,11 @@ export default function Home() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: userInput }),
+        body: JSON.stringify({
+          prompt: userInput,
+          currentDate,
+          dayOfWeek,
+        }),
       });
 
       const data = await res.json();
@@ -255,7 +327,7 @@ export default function Home() {
         throw new Error("Invalid response format: expected a task array.");
       }
 
-      const tasks = mapApiItemsToTasks(data);
+      const tasks = mapApiItemsToTasks(data, currentDate);
       setTimelineData(tasks);
     } catch (err: unknown) {
       setErrorMessage(
@@ -304,6 +376,12 @@ export default function Home() {
 
         {/* Right Nav Actions */}
         <div className="flex items-center gap-3">
+          {/* Current Date Badge */}
+          <div className="hidden md:flex items-center gap-1.5 text-xs text-zinc-400 bg-white/[0.03] px-3 py-1.5 rounded-lg border border-white/[0.07]">
+            <CalendarIcon className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="font-medium text-zinc-300">{formattedToday}</span>
+          </div>
+
           {(hasTimeline || userInput.trim() || previousPrompt) && (
             <button
               onClick={handleReset}
@@ -341,7 +419,7 @@ export default function Home() {
                   Prompt Command Deck
                 </span>
 
-                {/* Prompt Optimization Action */}
+                {/* Prompt Optimization Action Button */}
                 <div className="flex items-center gap-2">
                   {previousPrompt && (
                     <button
@@ -366,10 +444,10 @@ export default function Home() {
                   )}
                   <button
                     type="button"
-                    onClick={handleOptimizePrompt}
+                    onClick={handleOpenOptimizeModal}
                     disabled={!userInput.trim() || isOptimizing || isLoading}
-                    className="btn-optimize disabled:opacity-40 disabled:cursor-not-allowed"
-                    title="Optimize and structure prompt before scheduling"
+                    className="btn-optimize disabled:opacity-40 disabled:cursor-not-allowed group"
+                    title="Customize priorities and daily habits before scheduling"
                   >
                     {isOptimizing ? (
                       <>
@@ -378,7 +456,7 @@ export default function Home() {
                       </>
                     ) : (
                       <>
-                        <Wand2 className="w-3.5 h-3.5 text-indigo-400" />
+                        <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-400 group-hover:rotate-45 transition-transform" />
                         <span>Optimize Prompt</span>
                       </>
                     )}
@@ -389,8 +467,8 @@ export default function Home() {
                 Draft your agenda
               </h1>
               <p className="text-xs text-zinc-400 leading-relaxed mt-1">
-                Drop your raw thoughts, deadlines, and habits. Gemma 4 will
-                calibrate a high-performance visual schedule.
+                Drop your messy thoughts, deadlines, and commitments. Gemma 4
+                weaves them with your daily habits and priorities.
               </p>
             </div>
 
@@ -443,7 +521,7 @@ export default function Home() {
                     <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20">
                       <span className="text-indigo-300 flex items-center gap-1 text-[11px] font-medium">
                         <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
-                        Optimized
+                        Optimized with daily habits
                       </span>
                       <button
                         type="button"
@@ -632,6 +710,314 @@ export default function Home() {
           </div>
         </section>
       </main>
+
+      {/* ════════════════════════════════════════════════
+          PROMPT OPTIMIZATION PREFERENCES MODAL
+          Asks user for task priority and daily habits
+         ════════════════════════════════════════════════ */}
+      <AnimatePresence>
+        {showOptimizeModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                if (!isOptimizing) setShowOptimizeModal(false);
+              }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+
+            {/* Modal Dialog */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="relative z-10 w-full max-w-lg rounded-2xl bg-[#0c101b] border border-white/[0.12] p-6 shadow-[0_25px_70px_rgba(0,0,0,0.8)] overflow-hidden max-h-[90vh] flex flex-col"
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between pb-4 border-b border-white/[0.08]">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 p-0.5 flex items-center justify-center shadow-lg">
+                    <div className="w-full h-full bg-[#0c101b] rounded-[10px] flex items-center justify-center">
+                      <Wand2 className="w-5 h-5 text-indigo-400" />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+                      Optimize Schedule
+                      <span className="text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                        {dayOfWeek}, {formattedToday}
+                      </span>
+                    </h3>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      Tell Gemma 4 your priorities and habits to craft a complete agenda.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    if (!isOptimizing) setShowOptimizeModal(false);
+                  }}
+                  className="text-zinc-500 hover:text-zinc-300 p-1"
+                  disabled={isOptimizing}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Scrollable Form Body */}
+              <form
+                onSubmit={handleExecuteOptimization}
+                className="overflow-y-auto space-y-5 pt-4 pr-1 flex-1 scrollbar-thin"
+              >
+                {/* 1. Priority Strategy */}
+                <div>
+                  <label className="block text-xs uppercase tracking-wider font-semibold text-zinc-300 mb-2">
+                    Priority Strategy (What matters most today?)
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {[
+                      {
+                        id: "deep-work",
+                        title: "Deadlines First",
+                        desc: "Urgent work in peak focus hours",
+                        badge: "Focused",
+                      },
+                      {
+                        id: "balanced",
+                        title: "Balanced Flow",
+                        desc: "Even work & rest rhythm",
+                        badge: "Equilibrium",
+                      },
+                      {
+                        id: "wellness",
+                        title: "Habits & Rest",
+                        desc: "Gym, meals, & 8h sleep anchored",
+                        badge: "Sustained",
+                      },
+                    ].map((opt) => {
+                      const isSelected = formPrefs.priorityFocus === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() =>
+                            setFormPrefs((p) => ({
+                              ...p,
+                              priorityFocus: opt.id as UserPreferences["priorityFocus"],
+                            }))
+                          }
+                          className={`p-3 rounded-xl border text-left transition-all relative ${
+                            isSelected
+                              ? "bg-indigo-500/15 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.2)]"
+                              : "bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04] text-zinc-400"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span
+                              className={`text-xs font-bold ${
+                                isSelected ? "text-white" : "text-zinc-300"
+                              }`}
+                            >
+                              {opt.title}
+                            </span>
+                            {isSelected && (
+                              <Check className="w-3.5 h-3.5 text-indigo-400" />
+                            )}
+                          </div>
+                          <p className="text-[11px] text-zinc-400 leading-tight">
+                            {opt.desc}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Daily Habits & Routines */}
+                <div>
+                  <label className="block text-xs uppercase tracking-wider font-semibold text-zinc-300 mb-2">
+                    Include Daily Tasks & Routines
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {[
+                      {
+                        key: "includeMorningRoutine",
+                        icon: Sunrise,
+                        title: "Morning Routine & Breakfast",
+                        time: "07:30 – 08:30 (45-60m)",
+                      },
+                      {
+                        key: "includeMeals",
+                        icon: Utensils,
+                        title: "Lunch & Dinner Breaks",
+                        time: "Dedicated nutrition stops",
+                      },
+                      {
+                        key: "includeWorkout",
+                        icon: Dumbbell,
+                        title: "Workout / Gym Session",
+                        time: "1 – 2 hours exercise",
+                      },
+                      {
+                        key: "includeSleep",
+                        icon: Moon,
+                        title: "Wind-down & 8h Sleep",
+                        time: "23:00 – 07:00 restorative rest",
+                      },
+                      {
+                        key: "includeBuffers",
+                        icon: Coffee,
+                        title: "15m Rest Buffers",
+                        time: "Between intense sprint blocks",
+                      },
+                    ].map((habit) => {
+                      const Icon = habit.icon;
+                      const isChecked = Boolean(
+                        formPrefs[habit.key as keyof UserPreferences]
+                      );
+
+                      return (
+                        <button
+                          key={habit.key}
+                          type="button"
+                          onClick={() =>
+                            setFormPrefs((p) => ({
+                              ...p,
+                              [habit.key]: !p[habit.key as keyof UserPreferences],
+                            }))
+                          }
+                          className={`p-2.5 rounded-xl border text-left flex items-start gap-2.5 transition-all ${
+                            isChecked
+                              ? "bg-white/[0.04] border-indigo-500/40 text-white"
+                              : "bg-white/[0.01] border-white/[0.04] text-zinc-500 opacity-60"
+                          }`}
+                        >
+                          <div
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                              isChecked
+                                ? "bg-indigo-500/20 text-indigo-300"
+                                : "bg-white/[0.03] text-zinc-600"
+                            }`}
+                          >
+                            <Icon className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold truncate">
+                                {habit.title}
+                              </span>
+                              <div
+                                className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${
+                                  isChecked
+                                    ? "bg-indigo-600 border-indigo-500 text-white"
+                                    : "border-white/[0.15] bg-transparent"
+                                }`}
+                              >
+                                {isChecked && <Check className="w-2.5 h-2.5" />}
+                              </div>
+                            </div>
+                            <span className="text-[10px] text-zinc-400 block mt-0.5">
+                              {habit.time}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 3. Peak Focus Window */}
+                <div>
+                  <label className="block text-xs uppercase tracking-wider font-semibold text-zinc-300 mb-1.5">
+                    Peak Focus Window
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: "morning", label: "Morning (09:00 - 13:00)" },
+                      { id: "afternoon", label: "Afternoon (14:00 - 19:00)" },
+                      { id: "flexible", label: "Flexible Energy" },
+                    ].map((w) => {
+                      const isSelected = formPrefs.focusWindow === w.id;
+                      return (
+                        <button
+                          key={w.id}
+                          type="button"
+                          onClick={() =>
+                            setFormPrefs((p) => ({
+                              ...p,
+                              focusWindow: w.id as UserPreferences["focusWindow"],
+                            }))
+                          }
+                          className={`px-3 py-2 rounded-xl text-xs font-medium border text-center transition-all ${
+                            isSelected
+                              ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-200"
+                              : "bg-white/[0.02] border-white/[0.06] text-zinc-400 hover:text-zinc-200"
+                          }`}
+                        >
+                          {w.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 4. Custom Notes or Deadlines */}
+                <div>
+                  <label className="block text-xs uppercase tracking-wider font-semibold text-zinc-300 mb-1.5">
+                    Specific Deadlines or Constraints (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={formPrefs.customNotes || ""}
+                    onChange={(e) =>
+                      setFormPrefs((p) => ({
+                        ...p,
+                        customNotes: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g. push_swap must be finished before 2pm, gym strictly at 6pm"
+                    className="clean-input"
+                  />
+                </div>
+
+                {/* Footer Actions */}
+                <div className="pt-3 flex items-center justify-end gap-3 border-t border-white/[0.08]">
+                  <button
+                    type="button"
+                    onClick={() => setShowOptimizeModal(false)}
+                    disabled={isOptimizing}
+                    className="btn-secondary"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isOptimizing}
+                    className="btn-primary min-w-[170px]"
+                  >
+                    {isOptimizing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2 text-indigo-200" />
+                        <span>Optimizing with Gemma 4…</span>
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="w-4 h-4 mr-2 text-pink-200" />
+                        <span>Optimize Prompt</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
