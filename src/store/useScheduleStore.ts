@@ -7,6 +7,7 @@ export interface Task {
   description: string;
   startTime: string;
   endTime: string;
+  date?: string; // YYYY-MM-DD
   duration: number; // in minutes
   priority: "low" | "medium" | "high";
   category: string;

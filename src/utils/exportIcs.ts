@@ -39,6 +39,10 @@ export function convertTimelineToIcs(tasks: Task[]): string {
       .split(":")
       .map(Number);
     const startDate = new Date(now);
+    if (task.date && /^\d{4}-\d{2}-\d{2}$/.test(task.date)) {
+      const [year, month, day] = task.date.split("-").map(Number);
+      startDate.setFullYear(year, month - 1, day);
+    }
     startDate.setHours(
       isNaN(startH) ? 9 : startH,
       isNaN(startM) ? 0 : startM,

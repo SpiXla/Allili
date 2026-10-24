@@ -2,20 +2,15 @@ import { GoogleGenAI } from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
 
 const SYSTEM_PROMPT =
-  'You are an elite productivity AI. The user will provide a messy list of projects, deadlines, and daily habits. Break them down into a stress-free daily schedule that respects their pace. You MUST output ONLY a raw JSON array. Do not include markdown formatting or backticks. Schema for each object: { "id": "uuid", "title": "string", "duration_minutes": number, "start_time": "HH:MM", "category": "work" | "break" | "routine", "advice": "1 short sentence of pacing advice" }.';
+  'You are an elite productivity AI. The user will provide a messy list of projects, deadlines, and habits. Analyze the scope of the tasks and deadlines to intelligently determine whether a single-day or multi-day weekly schedule is more appropriate. Break the tasks down into a stress-free schedule spanning that inferred timeframe. You MUST output ONLY a raw JSON array. Schema: { "id": "uuid", "title": "string", "duration_minutes": number, "date": "YYYY-MM-DD", "start_time": "HH:MM", "category": "work" | "break" | "routine", "advice": "short string" }.';
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const input =
-      body.userInput ||
-      body.prompt ||
-      body.text ||
-      (typeof body === "string" ? body : "");
+    const { prompt } = await req.json();
 
-    if (!input || typeof input !== "string" || !input.trim()) {
+    if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
       return NextResponse.json(
-        { error: "A non-empty prompt or userInput text is required." },
+        { error: "A non-empty prompt is required in the request body." },
         { status: 400 }
       );
     }
@@ -43,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     const response = await ai.models.generateContent({
       model,
-      contents: input,
+      contents: prompt,
       config: {
         systemInstruction: SYSTEM_PROMPT,
         responseMimeType: "application/json",

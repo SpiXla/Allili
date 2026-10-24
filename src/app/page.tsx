@@ -22,6 +22,7 @@ interface ApiTaskItem {
   title?: string;
   duration_minutes?: number;
   duration?: number;
+  date?: string;
   start_time?: string;
   startTime?: string;
   end_time?: string;
@@ -83,6 +84,7 @@ function mapApiItemsToTasks(items: ApiTaskItem[]): Task[] {
       description: item.advice || item.description || "",
       startTime,
       endTime,
+      date: item.date,
       duration,
       priority,
       category: item.category || "routine",
@@ -115,7 +117,7 @@ export default function Home() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userInput }),
+        body: JSON.stringify({ prompt: userInput }),
       });
 
       const data = await res.json();
