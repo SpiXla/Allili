@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, CheckCircle2, X } from "lucide-react";
+import { Calendar, Check, X } from "lucide-react";
 import { useScheduleStore } from "@/store/useScheduleStore";
 import { downloadIcsFile } from "@/utils/exportIcs";
 
@@ -19,7 +19,6 @@ export function ExportCalendarButton() {
       downloadIcsFile(timelineData, "allili-schedule.ics");
       setShowToast(true);
 
-      // Auto dismiss toast after 3.5 seconds
       setTimeout(() => {
         setShowToast(false);
       }, 3500);
@@ -32,56 +31,51 @@ export function ExportCalendarButton() {
 
   return (
     <>
-      {/* ── Export Button ── */}
+      {/* ── Minimalist Export Button ── */}
       <motion.button
         id="export-calendar-btn"
         onClick={handleExport}
         disabled={timelineData.length === 0 || isExporting}
-        whileHover={{ scale: 1.03 }}
-        whileTap={{ scale: 0.97 }}
-        className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-medium
-                   bg-surface-200/90 hover:bg-surface-300/80
-                   border border-accent/30 hover:border-accent/60
-                   text-foreground transition-all duration-200
-                   shadow-sm hover:shadow-glow/20
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium
+                   bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white
+                   border border-white/[0.08] hover:border-white/[0.16]
+                   transition-all duration-150 shadow-sm
                    disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        <Calendar className="w-3.5 h-3.5 text-accent" />
-        <span>Export to Calendar</span>
+        <Calendar className="w-3.5 h-3.5 text-violet-400" />
+        <span>Export .ics</span>
       </motion.button>
 
-      {/* ── Success Toast Notification ── */}
+      {/* ── Modern Toast Notification ── */}
       <AnimatePresence>
         {showToast && (
           <motion.div
-            initial={{ opacity: 0, y: 30, scale: 0.92 }}
+            initial={{ opacity: 0, y: 16, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 350, damping: 25 }}
-            className="fixed bottom-6 right-6 z-50 flex items-center gap-3.5
-                       px-4 py-3 rounded-2xl glass-card
-                       border border-emerald-500/30 bg-surface-200/95
-                       shadow-glow-blue/20 backdrop-blur-2xl"
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="fixed bottom-6 right-6 z-50 flex items-center gap-3
+                       px-4 py-3 rounded-xl bg-[#121218]/95
+                       border border-white/[0.12] shadow-2xl backdrop-blur-xl"
           >
-            <div className="w-8 h-8 rounded-full bg-emerald-500/15 ring-1 ring-emerald-500/30 flex items-center justify-center flex-shrink-0">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <div className="w-6 h-6 rounded-md bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center flex-shrink-0">
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
             </div>
 
-            <div className="flex flex-col">
-              <span className="text-xs font-semibold text-foreground">
-                Calendar Exported!
+            <div className="flex flex-col pr-1">
+              <span className="text-xs font-medium text-zinc-100">
+                Schedule Exported
               </span>
-              <span className="text-[11px] text-muted">
-                Downloaded{" "}
-                <span className="text-emerald-400 font-mono">
-                  allili-schedule.ics
-                </span>
+              <span className="text-[11px] font-mono text-zinc-500">
+                allili-schedule.ics
               </span>
             </div>
 
             <button
               onClick={() => setShowToast(false)}
-              className="ml-2 text-muted hover:text-foreground transition-colors p-1"
+              className="text-zinc-500 hover:text-zinc-300 transition-colors p-1"
               aria-label="Dismiss"
             >
               <X className="w-3.5 h-3.5" />

@@ -1,16 +1,16 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
-  Send,
-  Brain,
   CalendarClock,
   Loader2,
-  LayoutList,
   AlertCircle,
   X,
+  RotateCcw,
+  Layers,
+  Zap,
 } from "lucide-react";
 import { useScheduleStore, type Task } from "@/store/useScheduleStore";
 import { TimelineSkeleton } from "@/components/TimelineSkeleton";
@@ -33,15 +33,17 @@ interface ApiTaskItem {
   priority?: "low" | "medium" | "high";
 }
 
-/**
- * Maps raw JSON objects from the API to the application's Task interface.
- */
+const INSPIRATION_PROMPTS = [
+  "1337 push_swap due tomorrow, gym for 2h, and 8h of sleep",
+  "Weekly sprint: build Next.js auth, review PRs, 3x cardio sessions",
+  "Exam cram on Friday: study algorithms 4h/day, morning routines",
+];
+
 function mapApiItemsToTasks(items: ApiTaskItem[]): Task[] {
   return items.map((item, index) => {
     const startTime = item.start_time || item.startTime || "09:00";
     const duration = Number(item.duration_minutes || item.duration || 30);
 
-    // Compute end time if not directly provided
     let endTime = item.end_time || item.endTime;
     if (!endTime) {
       const [h, m] = startTime.split(":").map(Number);
@@ -58,13 +60,9 @@ function mapApiItemsToTasks(items: ApiTaskItem[]): Task[] {
       }
     }
 
-    // Determine priority
     let priority: "low" | "medium" | "high" = "medium";
     const cat = (item.category || "").toLowerCase();
-    if (
-      item.priority &&
-      ["low", "medium", "high"].includes(item.priority)
-    ) {
+    if (item.priority && ["low", "medium", "high"].includes(item.priority)) {
       priority = item.priority;
     } else if (cat === "work") {
       priority = "high";
@@ -103,9 +101,33 @@ export default function Home() {
   const setIsLoading = useScheduleStore((s) => s.setIsLoading);
   const timelineData = useScheduleStore((s) => s.timelineData);
   const setTimelineData = useScheduleStore((s) => s.setTimelineData);
+  const resetStore = useScheduleStore((s) => s.reset);
 
   const hasTimeline = timelineData.length > 0;
   const isEmpty = !isLoading && !hasTimeline;
+
+  // Schedule statistics
+  const stats = useMemo(() => {
+    if (timelineData.length === 0) return null;
+    const totalMinutes = timelineData.reduce(
+      (acc, t) => acc + (t.duration || 0),
+      0
+    );
+    const workMinutes = timelineData
+      .filter((t) => t.category?.toLowerCase() === "work")
+      .reduce((acc, t) => acc + (t.duration || 0), 0);
+    const breakMinutes = timelineData
+      .filter((t) => t.category?.toLowerCase() === "break")
+      .reduce((acc, t) => acc + (t.duration || 0), 0);
+
+    return {
+      totalHours: (totalMinutes / 60).toFixed(1),
+      workHours: (workMinutes / 60).toFixed(1),
+      breakHours: (breakMinutes / 60).toFixed(1),
+      totalTasks: timelineData.length,
+      completedTasks: timelineData.filter((t) => t.completed).length,
+    };
+  }, [timelineData]);
 
   const handleGenerate = async () => {
     if (!userInput.trim() || isLoading) return;
@@ -149,51 +171,71 @@ export default function Home() {
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col">
-      {/* ── Ambient background glows ── */}
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute top-0 left-1/3 w-[700px] h-[700px] rounded-full bg-accent/[0.07] blur-[150px]" />
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] rounded-full bg-neon/[0.05] blur-[130px]" />
+    <div className="relative min-h-screen flex flex-col bg-[#09090b] text-[#f4f4f5] antialiased">
+      {/* ── Background subtle grid & ambient lighting ── */}
+      <div className="pointer-events-none fixed inset-0 z-0 bg-grid-pattern opacity-60" />
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        <div className="absolute -top-32 left-1/4 w-[600px] h-[600px] rounded-full bg-violet-600/[0.04] blur-[140px]" />
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] rounded-full bg-sky-500/[0.03] blur-[140px]" />
       </div>
 
-      {/* ── Top bar ── */}
-      <header className="relative z-20 flex items-center justify-between px-6 lg:px-10 h-16 border-b border-surface-500/10 bg-surface/80 backdrop-blur-md">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-accent flex items-center justify-center shadow-glow">
-            <Brain className="w-4 h-4 text-white" />
+      {/* ── Minimalist Top Navigation ── */}
+      <header className="relative z-20 flex items-center justify-between px-6 lg:px-8 h-14 border-b border-white/[0.07] bg-[#09090b]/80 backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.3)]">
+            <Sparkles className="w-3.5 h-3.5 text-white" />
           </div>
-          <span className="font-semibold text-lg tracking-tight">
-            <span className="gradient-text">Allili</span>
+          <span className="font-semibold text-sm tracking-tight text-white flex items-center gap-2">
+            Allili
+            <span className="text-[10px] font-mono text-zinc-500 font-normal px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/[0.06]">
+              AI Planner
+            </span>
           </span>
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-muted bg-surface-200/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-surface-500/20">
-          <Sparkles className="w-3.5 h-3.5 text-accent" />
-          AI Schedule Planner
+
+        {/* Right Nav Actions */}
+        <div className="flex items-center gap-3">
+          {hasTimeline && (
+            <>
+              <button
+                onClick={() => resetStore()}
+                className="text-zinc-400 hover:text-zinc-200 text-xs flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-white/[0.04] transition-all"
+                title="Reset schedule"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Reset</span>
+              </button>
+              <ExportCalendarButton />
+            </>
+          )}
+
+          <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono text-zinc-400 bg-white/[0.03] px-2.5 py-1 rounded-lg border border-white/[0.06]">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Gemma 4</span>
+          </div>
         </div>
       </header>
 
-      {/* ── Main split layout ── */}
-      <main className="relative z-10 flex-1 flex flex-col lg:flex-row">
+      {/* ── Main Split View ── */}
+      <main className="relative z-10 flex-1 flex flex-col lg:flex-row min-h-0">
         {/* ════════════════════════════════════════════════
-            LEFT PANEL — Brain Dump
+            LEFT PANEL — Prompt Command Deck
            ════════════════════════════════════════════════ */}
-        <motion.aside
-          initial={{ opacity: 0, x: -30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="w-full lg:w-[440px] xl:w-[480px] flex-shrink-0
-                     border-b lg:border-b-0 lg:border-r border-surface-500/10
-                     flex flex-col"
-        >
-          <div className="flex-1 flex flex-col p-6 lg:p-8 gap-6">
-            {/* Section header */}
+        <aside className="w-full lg:w-[420px] xl:w-[450px] flex-shrink-0 border-b lg:border-b-0 lg:border-r border-white/[0.07] bg-[#0c0c10]/40 flex flex-col">
+          <div className="p-6 lg:p-7 flex flex-col gap-5 flex-1">
+            {/* Header info */}
             <div>
-              <h1 className="text-2xl font-bold tracking-tight mb-1">
-                Brain Dump
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-violet-400 font-semibold">
+                  Brain Dump
+                </span>
+              </div>
+              <h1 className="text-xl font-bold tracking-tight text-zinc-100">
+                Plan your schedule
               </h1>
-              <p className="text-sm text-muted">
-                Describe your day, tasks, or goals — the AI will craft
-                your perfect schedule.
+              <p className="text-xs text-zinc-400 leading-relaxed mt-1">
+                Drop your messy thoughts, deadlines, or habits. The AI creates a
+                stress-free calendar.
               </p>
             </div>
 
@@ -204,15 +246,13 @@ export default function Home() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="glass-card p-3.5 border-rose-500/30 bg-rose-500/10 flex items-start gap-3"
+                  className="p-3 rounded-xl border border-rose-500/30 bg-rose-500/10 flex items-start gap-2.5 text-xs text-rose-300"
                 >
                   <AlertCircle className="w-4 h-4 text-rose-400 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-rose-300 leading-relaxed flex-1">
-                    {errorMessage}
-                  </p>
+                  <p className="flex-1 leading-relaxed">{errorMessage}</p>
                   <button
                     onClick={() => setErrorMessage(null)}
-                    className="text-rose-400 hover:text-rose-200 p-0.5"
+                    className="text-rose-400 hover:text-rose-200"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -220,154 +260,179 @@ export default function Home() {
               )}
             </AnimatePresence>
 
-            {/* ── Glassmorphic textarea card ── */}
-            <div className="glass-card flex-1 flex flex-col p-1 min-h-[240px]">
+            {/* ── Minimalist Input Box ── */}
+            <div className="flex-1 flex flex-col rounded-2xl bg-[#121218] border border-white/[0.08] focus-within:border-violet-500/50 focus-within:ring-2 focus-within:ring-violet-500/15 transition-all min-h-[220px]">
               <textarea
                 ref={textareaRef}
                 id="brain-dump-input"
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="e.g. I have a 1337 push_swap project due tomorrow, I need to go to the gym for 2 hours, and I want 8 hours of sleep…"
-                className="flex-1 w-full resize-none bg-transparent text-foreground
-                           placeholder:text-muted/60 text-sm leading-relaxed
-                           p-4 rounded-xl
-                           focus:outline-none focus:ring-0
-                           scrollbar-thin"
+                placeholder="Write your day or week here: e.g. Finish push_swap project by tomorrow 2pm, hit the gym for 2 hours, get 8 hours of sleep…"
+                className="flex-1 w-full resize-none bg-transparent text-zinc-100 placeholder:text-zinc-500 text-xs leading-relaxed p-4 focus:outline-none scrollbar-thin"
                 disabled={isLoading}
               />
 
-              {/* Character hint */}
-              <div className="flex items-center justify-between px-4 pb-3">
-                <span className="text-[11px] text-muted/50 font-mono">
-                  {userInput.length > 0
-                    ? `${userInput.length} chars`
-                    : ""}
+              {/* Character & Shortcut Counter */}
+              <div className="flex items-center justify-between px-4 py-2.5 border-t border-white/[0.04] text-[11px] font-mono text-zinc-500">
+                <span>
+                  {userInput.length > 0 ? `${userInput.length} chars` : "Empty"}
                 </span>
+                <span className="text-zinc-600">⌘ + Enter to run</span>
               </div>
             </div>
 
-            {/* ── Generate button ── */}
-            <motion.button
+            {/* Quick Inspiration Prompts */}
+            <div>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 font-semibold mb-2 block">
+                Quick Prompts
+              </span>
+              <div className="flex flex-col gap-1.5">
+                {INSPIRATION_PROMPTS.map((promptText, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setUserInput(promptText)}
+                    disabled={isLoading}
+                    className="text-left text-[11px] text-zinc-400 hover:text-zinc-200 bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.04] hover:border-white/[0.08] px-3 py-1.5 rounded-lg transition-all truncate"
+                  >
+                    &ldquo;{promptText}&rdquo;
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Generate Action Button ── */}
+            <button
               id="generate-schedule-btn"
               onClick={handleGenerate}
               disabled={!userInput.trim() || isLoading}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.97 }}
-              className="btn-glow w-full flex items-center justify-center gap-2.5
-                         disabled:opacity-40 disabled:cursor-not-allowed
-                         disabled:shadow-none disabled:hover:scale-100"
+              className="btn-primary w-full disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Generating…
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Generating schedule…
                 </>
               ) : (
                 <>
-                  <Send className="w-4 h-4" />
+                  <Zap className="w-3.5 h-3.5 mr-2" />
                   Generate Schedule
                 </>
               )}
-            </motion.button>
+            </button>
 
-            {/* Keyboard hint */}
-            <p className="text-center text-[11px] text-muted/40">
-              Press{" "}
-              <kbd className="px-1.5 py-0.5 rounded bg-surface-300/50 text-muted/60 font-mono text-[10px]">
-                ⌘ Enter
-              </kbd>{" "}
-              to generate
-            </p>
+            {/* Schedule stats mini card (when loaded) */}
+            {stats && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] grid grid-cols-3 gap-2 text-center"
+              >
+                <div>
+                  <span className="text-[10px] font-mono text-zinc-500 block uppercase">
+                    Planned
+                  </span>
+                  <span className="text-sm font-semibold text-zinc-200 font-mono">
+                    {stats.totalHours}h
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono text-zinc-500 block uppercase">
+                    Deep Work
+                  </span>
+                  <span className="text-sm font-semibold text-violet-400 font-mono">
+                    {stats.workHours}h
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono text-zinc-500 block uppercase">
+                    Breaks
+                  </span>
+                  <span className="text-sm font-semibold text-emerald-400 font-mono">
+                    {stats.breakHours}h
+                  </span>
+                </div>
+              </motion.div>
+            )}
           </div>
-        </motion.aside>
+        </aside>
 
         {/* ════════════════════════════════════════════════
-            RIGHT PANEL — Timeline
+            RIGHT PANEL — Visual Calendar Grid
            ════════════════════════════════════════════════ */}
-        <motion.section
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.15 }}
-          className="flex-1 flex flex-col min-h-0"
-        >
-          {/* Panel header */}
-          <div className="flex items-center justify-between px-6 lg:px-8 pt-6 lg:pt-8 pb-4">
-            <div className="flex items-center gap-2">
-              <CalendarClock className="w-5 h-5 text-accent" />
-              <h2 className="text-lg font-semibold tracking-tight">
-                Your Timeline
+        <section className="flex-1 flex flex-col min-h-0 bg-[#09090b]">
+          {/* Section Header */}
+          <div className="flex items-center justify-between px-6 lg:px-8 py-3.5 border-b border-white/[0.07] bg-[#0c0c10]/30">
+            <div className="flex items-center gap-2.5">
+              <CalendarClock className="w-4 h-4 text-violet-400" />
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
+                Visual Schedule
               </h2>
             </div>
 
             {hasTimeline && (
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-muted bg-surface-200/60 px-2.5 py-1 rounded-full border border-surface-500/20">
-                  {timelineData.length} task
-                  {timelineData.length !== 1 ? "s" : ""}
-                </span>
-                <ExportCalendarButton />
-              </div>
+              <span className="text-[11px] font-mono text-zinc-400 bg-white/[0.04] px-2.5 py-1 rounded-md border border-white/[0.06]">
+                {timelineData.length} tasks scheduled
+              </span>
             )}
           </div>
 
-          {/* Content area */}
-          <div className="flex-1 overflow-y-auto px-6 lg:px-8 pb-8 relative">
+          {/* Canvas content */}
+          <div className="flex-1 p-4 lg:p-6 overflow-hidden flex flex-col">
             {/* Loading state */}
             {isLoading && <TimelineSkeleton />}
 
-            {/* Calendar time-grid view */}
+            {/* Calendar view */}
             {!isLoading && hasTimeline && <CalendarView />}
 
-            {/* Empty state */}
+            {/* Modern Minimalist Empty State */}
             {isEmpty && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="flex-1 flex flex-col items-center justify-center text-center py-20"
+                transition={{ duration: 0.3 }}
+                className="flex-1 flex flex-col items-center justify-center text-center p-8 rounded-2xl border border-white/[0.06] bg-white/[0.01]"
               >
-                {/* Decorative circle */}
+                {/* Minimal geometric graphic */}
                 <div className="relative mb-6">
-                  <div className="w-20 h-20 rounded-full bg-surface-200 border border-surface-500/20 flex items-center justify-center">
-                    <LayoutList className="w-8 h-8 text-surface-700" />
+                  <div className="w-16 h-16 rounded-2xl bg-[#121218] border border-white/[0.08] flex items-center justify-center shadow-2xl">
+                    <Layers className="w-6 h-6 text-zinc-500" />
                   </div>
-                  {/* Orbiting ring */}
+                  {/* Concentric subtle orbit */}
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{
-                      duration: 12,
+                      duration: 25,
                       repeat: Infinity,
                       ease: "linear",
                     }}
-                    className="absolute -inset-3 rounded-full border border-dashed border-surface-600/40"
+                    className="absolute -inset-2.5 rounded-2xl border border-dashed border-violet-500/25 pointer-events-none"
                   />
-                  {/* Accent dot on the orbit */}
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{
-                      duration: 12,
-                      repeat: Infinity,
-                      ease: "linear",
-                    }}
-                    className="absolute -inset-3"
-                  >
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-accent shadow-glow" />
-                  </motion.div>
                 </div>
 
-                <h3 className="text-base font-semibold text-muted mb-1">
-                  No schedule yet
+                <h3 className="text-sm font-semibold text-zinc-200 mb-1 tracking-tight">
+                  No schedule generated yet
                 </h3>
-                <p className="text-sm text-muted/60 max-w-[260px]">
-                  Dump your thoughts in the left panel and hit{" "}
-                  <span className="text-accent font-medium">Generate</span>{" "}
-                  to see your timeline appear here.
+                <p className="text-xs text-zinc-500 max-w-xs mb-5 leading-relaxed">
+                  Enter your commitments in the prompt deck, or click any prompt
+                  preset on the left to start.
                 </p>
+
+                <button
+                  onClick={() =>
+                    setUserInput(
+                      "1337 push_swap due tomorrow, gym for 2h, and 8h of sleep"
+                    )
+                  }
+                  className="btn-secondary text-[11px]"
+                >
+                  <Sparkles className="w-3 h-3 text-violet-400 mr-1.5" />
+                  Load Sample Prompt
+                </button>
               </motion.div>
             )}
           </div>
-        </motion.section>
+        </section>
       </main>
     </div>
   );

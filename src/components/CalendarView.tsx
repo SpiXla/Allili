@@ -3,90 +3,82 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Clock,
   CheckCircle2,
   Circle,
   X,
-  Calendar as CalendarIcon,
-  Edit3,
-  Save,
+  Trash2,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useScheduleStore, type Task } from "@/store/useScheduleStore";
 
-const HOUR_HEIGHT = 64; // pixels per hour (approx 1.06px per minute)
+const HOUR_HEIGHT = 68; // px per hour
 
-/* Category style badges */
-const categoryStyles: Record<
+/* Category theme definitions */
+const categoryTheme: Record<
   string,
   {
-    bg: string;
-    border: string;
-    text: string;
+    stripe: string;
     badgeBg: string;
     badgeText: string;
+    border: string;
     glow: string;
   }
 > = {
   work: {
-    bg: "bg-accent/15 hover:bg-accent/25",
-    border: "border-accent/40 hover:border-accent/70",
-    text: "text-purple-100",
-    badgeBg: "bg-accent/30",
-    badgeText: "text-purple-200",
-    glow: "hover:shadow-glow/20",
+    stripe: "bg-violet-500",
+    badgeBg: "bg-violet-500/15",
+    badgeText: "text-violet-300",
+    border: "hover:border-violet-500/40",
+    glow: "hover:shadow-[0_0_20px_rgba(139,92,246,0.18)]",
   },
   break: {
-    bg: "bg-emerald-500/15 hover:bg-emerald-500/25",
-    border: "border-emerald-500/40 hover:border-emerald-500/70",
-    text: "text-emerald-100",
-    badgeBg: "bg-emerald-500/30",
-    badgeText: "text-emerald-200",
-    glow: "hover:shadow-[0_0_20px_rgba(16,185,129,0.25)]",
+    stripe: "bg-emerald-400",
+    badgeBg: "bg-emerald-500/15",
+    badgeText: "text-emerald-300",
+    border: "hover:border-emerald-500/40",
+    glow: "hover:shadow-[0_0_20px_rgba(16,185,129,0.18)]",
   },
   routine: {
-    bg: "bg-neon/15 hover:bg-neon/25",
-    border: "border-neon/40 hover:border-neon/70",
-    text: "text-sky-100",
-    badgeBg: "bg-neon/30",
-    badgeText: "text-sky-200",
-    glow: "hover:shadow-glow-blue/20",
+    stripe: "bg-sky-400",
+    badgeBg: "bg-sky-500/15",
+    badgeText: "text-sky-300",
+    border: "hover:border-sky-500/40",
+    glow: "hover:shadow-[0_0_20px_rgba(56,189,248,0.18)]",
   },
 };
 
-const defaultCategoryStyle = {
-  bg: "bg-surface-300/40 hover:bg-surface-300/60",
-  border: "border-surface-500/40 hover:border-surface-400",
-  text: "text-foreground",
-  badgeBg: "bg-surface-400/30",
-  badgeText: "text-muted",
+const defaultTheme = {
+  stripe: "bg-zinc-400",
+  badgeBg: "bg-zinc-800",
+  badgeText: "text-zinc-300",
+  border: "hover:border-zinc-600",
   glow: "hover:shadow-lg",
 };
 
-/**
- * Format date string (YYYY-MM-DD) into readable label (e.g. "Mon, Oct 24")
- */
-function formatDateLabel(dateStr: string): string {
-  if (!dateStr || dateStr === "Today") return "Today";
+function formatDateHeader(dateStr: string): { day: string; date: string } {
+  if (!dateStr || dateStr === "Today") {
+    return { day: "Today", date: "Scheduled" };
+  }
   try {
     const parts = dateStr.split("-").map(Number);
     if (parts.length === 3) {
       const d = new Date(parts[0], parts[1] - 1, parts[2]);
-      return d.toLocaleDateString("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-      });
+      return {
+        day: d.toLocaleDateString("en-US", { weekday: "short" }),
+        date: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      };
     }
   } catch {
     // fallback
   }
-  return dateStr;
+  return { day: dateStr, date: "" };
 }
 
 export function CalendarView() {
   const timelineData = useScheduleStore((s) => s.timelineData);
   const toggleTaskCompleted = useScheduleStore((s) => s.toggleTaskCompleted);
   const updateTask = useScheduleStore((s) => s.updateTask);
+  const removeTask = useScheduleStore((s) => s.removeTask);
 
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -96,17 +88,13 @@ export function CalendarView() {
   // Determine grid hour range
   const { startHour, endHour, hours } = useMemo(() => {
     let minH = 6;
-    let maxH = 23;
+    let maxH = 22;
 
     timelineData.forEach((task) => {
       const [h] = (task.startTime || "09:00").split(":").map(Number);
-      if (!isNaN(h)) {
-        if (h < minH) minH = Math.max(0, h);
-      }
+      if (!isNaN(h) && h < minH) minH = Math.max(0, h);
       const [endH] = (task.endTime || "").split(":").map(Number);
-      if (!isNaN(endH)) {
-        if (endH > maxH) maxH = Math.min(24, endH + 1);
-      }
+      if (!isNaN(endH) && endH > maxH) maxH = Math.min(24, endH + 1);
     });
 
     const hrs: number[] = [];
@@ -128,9 +116,7 @@ export function CalendarView() {
 
     const grouped: Record<string, Task[]> = {};
     cols.forEach((col) => {
-      grouped[col] = timelineData.filter(
-        (t) => (t.date || "Today") === col
-      );
+      grouped[col] = timelineData.filter((t) => (t.date || "Today") === col);
     });
 
     return { dateColumns: cols, tasksByDate: grouped };
@@ -147,7 +133,6 @@ export function CalendarView() {
     e.preventDefault();
     if (!editingTask) return;
 
-    // Recalculate end time
     const [h, m] = editStartTime.split(":").map(Number);
     let newEndTime = editingTask.endTime;
     if (!isNaN(h) && !isNaN(m)) {
@@ -173,67 +158,87 @@ export function CalendarView() {
   const totalGridHeight = (endHour - startHour) * HOUR_HEIGHT;
 
   return (
-    <div className="flex flex-col h-full w-full select-none">
-      {/* ── Calendar container ── */}
-      <div className="relative flex-1 overflow-x-auto overflow-y-auto rounded-2xl glass-card border border-surface-500/20 bg-surface-100/50">
-        <div className="min-w-[640px]">
-          {/* ── Date Column Headers ── */}
-          <div className="sticky top-0 z-20 flex border-b border-surface-500/20 bg-surface-200/90 backdrop-blur-md">
-            {/* Hour axis header spacer */}
-            <div className="w-16 flex-shrink-0 border-r border-surface-500/20 p-3 text-center">
-              <Clock className="w-3.5 h-3.5 text-muted mx-auto" />
+    <div className="flex flex-col h-full w-full">
+      {/* ── Scrollable Calendar Canvas ── */}
+      <div className="relative flex-1 overflow-x-auto overflow-y-auto rounded-2xl bg-[#0c0c10] border border-white/[0.08] shadow-2xl">
+        <div className="min-w-[680px]">
+          {/* ── Column Headers ── */}
+          <div className="sticky top-0 z-30 flex border-b border-white/[0.07] bg-[#0c0c10]/95 backdrop-blur-xl">
+            {/* Hour column corner */}
+            <div className="w-16 flex-shrink-0 border-r border-white/[0.06] p-3.5 flex items-center justify-center">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 font-semibold">
+                GMT
+              </span>
             </div>
 
-            {/* Date column labels */}
-            <div className="flex-1 grid" style={{ gridTemplateColumns: `repeat(${dateColumns.length}, minmax(0, 1fr))` }}>
-              {dateColumns.map((colDate) => (
-                <div
-                  key={colDate}
-                  className="px-4 py-3 border-r border-surface-500/10 last:border-r-0 flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-2">
-                    <CalendarIcon className="w-3.5 h-3.5 text-accent" />
-                    <span className="text-xs font-semibold text-foreground tracking-wide">
-                      {formatDateLabel(colDate)}
+            {/* Date columns */}
+            <div
+              className="flex-1 grid"
+              style={{
+                gridTemplateColumns: `repeat(${dateColumns.length}, minmax(0, 1fr))`,
+              }}
+            >
+              {dateColumns.map((colDate) => {
+                const { day, date } = formatDateHeader(colDate);
+                const count = tasksByDate[colDate]?.length || 0;
+
+                return (
+                  <div
+                    key={colDate}
+                    className="px-4 py-3 border-r border-white/[0.06] last:border-r-0 flex items-center justify-between"
+                  >
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xs font-semibold text-zinc-200 tracking-tight">
+                        {day}
+                      </span>
+                      {date && (
+                        <span className="text-[11px] font-mono text-zinc-500">
+                          {date}
+                        </span>
+                      )}
+                    </div>
+
+                    <span className="text-[10px] font-mono text-zinc-400 bg-white/[0.04] px-2 py-0.5 rounded-md border border-white/[0.04]">
+                      {count} {count === 1 ? "task" : "tasks"}
                     </span>
                   </div>
-                  <span className="text-[10px] text-muted bg-surface-300/40 px-2 py-0.5 rounded-full font-mono">
-                    {tasksByDate[colDate]?.length || 0} tasks
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
-          {/* ── Main Time Grid Body ── */}
-          <div className="relative flex" style={{ height: `${totalGridHeight}px` }}>
+          {/* ── Time-Grid Body ── */}
+          <div
+            className="relative flex"
+            style={{ height: `${totalGridHeight}px` }}
+          >
             {/* Left Hour Axis */}
-            <div className="w-16 flex-shrink-0 border-r border-surface-500/20 bg-surface-200/20">
+            <div className="w-16 flex-shrink-0 border-r border-white/[0.06] bg-[#09090d]/60 select-none">
               {hours.map((hour, idx) => {
                 if (idx === hours.length - 1) return null;
-                const timeString = `${String(hour).padStart(2, "0")}:00`;
+                const timeStr = `${String(hour).padStart(2, "0")}:00`;
                 return (
                   <div
                     key={hour}
                     style={{ height: `${HOUR_HEIGHT}px` }}
-                    className="relative border-b border-surface-500/10 px-2 text-right"
+                    className="relative border-b border-white/[0.04] px-2.5 text-right"
                   >
-                    <span className="text-[11px] font-mono text-muted/70 relative -top-2.5">
-                      {timeString}
+                    <span className="text-[11px] font-mono text-zinc-500 relative -top-2.5">
+                      {timeStr}
                     </span>
                   </div>
                 );
               })}
             </div>
 
-            {/* Grid Columns for Each Date */}
+            {/* Column lanes for tasks */}
             <div
               className="flex-1 grid relative"
               style={{
                 gridTemplateColumns: `repeat(${dateColumns.length}, minmax(0, 1fr))`,
               }}
             >
-              {/* Background horizontal hour lines */}
+              {/* Subtle horizontal grid lines */}
               <div className="absolute inset-0 pointer-events-none flex flex-col">
                 {hours.map((hour, idx) => {
                   if (idx === hours.length - 1) return null;
@@ -241,7 +246,7 @@ export function CalendarView() {
                     <div
                       key={hour}
                       style={{ height: `${HOUR_HEIGHT}px` }}
-                      className="border-b border-surface-500/10 w-full"
+                      className="border-b border-white/[0.03] w-full"
                     />
                   );
                 })}
@@ -254,7 +259,7 @@ export function CalendarView() {
                 return (
                   <div
                     key={colDate}
-                    className="relative border-r border-surface-500/10 last:border-r-0 h-full"
+                    className="relative border-r border-white/[0.06] last:border-r-0 h-full"
                   >
                     {columnTasks.map((task) => {
                       const [h, m] = (task.startTime || "09:00")
@@ -266,58 +271,67 @@ export function CalendarView() {
                       const topPx = (startMins / 60) * HOUR_HEIGHT;
                       const duration = task.duration || 30;
                       const heightPx = Math.max(
-                        36,
-                        (duration / 60) * HOUR_HEIGHT - 4
+                        34,
+                        (duration / 60) * HOUR_HEIGHT - 3
                       );
 
-                      const style =
-                        categoryStyles[task.category?.toLowerCase()] ||
-                        defaultCategoryStyle;
+                      const theme =
+                        categoryTheme[task.category?.toLowerCase()] ||
+                        defaultTheme;
 
                       return (
                         <motion.div
                           key={task.id}
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          whileHover={{ scale: 1.01, zIndex: 10 }}
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          whileHover={{ scale: 1.01, zIndex: 20 }}
                           onClick={() => openEditModal(task)}
                           style={{
                             top: `${topPx}px`,
                             height: `${heightPx}px`,
                           }}
-                          className={`absolute left-1.5 right-1.5 rounded-xl p-2.5
-                                     cursor-pointer border backdrop-blur-md transition-all duration-200
-                                     flex flex-col justify-between overflow-hidden
-                                     ${style.bg} ${style.border} ${style.glow}
-                                     ${task.completed ? "opacity-40" : ""}`}
+                          className={`absolute left-2 right-2 rounded-xl p-2.5
+                                     cursor-pointer bg-[#14141c]/95 border border-white/[0.08]
+                                     backdrop-blur-md transition-all duration-200
+                                     flex items-start gap-2.5 overflow-hidden group
+                                     ${theme.border} ${theme.glow}
+                                     ${task.completed ? "opacity-35" : ""}`}
                         >
-                          {/* Top row: title & time */}
-                          <div className="flex items-start justify-between gap-1 min-w-0">
-                            <span
-                              className={`text-xs font-semibold leading-tight truncate ${
-                                style.text
-                              } ${task.completed ? "line-through" : ""}`}
-                            >
-                              {task.title}
-                            </span>
-                            <span className="text-[10px] font-mono text-muted/80 flex-shrink-0">
-                              {task.startTime}
-                            </span>
-                          </div>
+                          {/* Accent Stripe indicator */}
+                          <div
+                            className={`w-1 h-full min-h-[16px] rounded-full flex-shrink-0 ${theme.stripe}`}
+                          />
 
-                          {/* Bottom row: category & duration (if space permits) */}
-                          {heightPx > 50 && (
-                            <div className="flex items-center justify-between gap-1 text-[10px] mt-1 pt-1 border-t border-surface-500/10">
+                          {/* Task details */}
+                          <div className="flex-1 min-w-0 flex flex-col justify-between h-full">
+                            {/* Top row: Title and time */}
+                            <div className="flex items-baseline justify-between gap-1.5">
                               <span
-                                className={`px-1.5 py-0.5 rounded-md font-medium uppercase text-[9px] tracking-wider ${style.badgeBg} ${style.badgeText}`}
+                                className={`text-xs font-medium text-zinc-100 truncate ${
+                                  task.completed ? "line-through text-zinc-500" : ""
+                                }`}
                               >
-                                {task.category || "routine"}
+                                {task.title}
                               </span>
-                              <span className="text-muted/70 font-mono">
-                                {task.duration}m
+                              <span className="text-[10px] font-mono text-zinc-400 flex-shrink-0">
+                                {task.startTime}
                               </span>
                             </div>
-                          )}
+
+                            {/* Bottom row (if card is tall enough) */}
+                            {heightPx > 48 && (
+                              <div className="flex items-center justify-between gap-1 pt-1 mt-auto">
+                                <span
+                                  className={`text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded ${theme.badgeBg} ${theme.badgeText}`}
+                                >
+                                  {task.category || "routine"}
+                                </span>
+                                <span className="text-[10px] font-mono text-zinc-500">
+                                  {task.duration}m
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </motion.div>
                       );
                     })}
@@ -329,7 +343,7 @@ export function CalendarView() {
         </div>
       </div>
 
-      {/* ── Sleek Edit Modal / Popover ── */}
+      {/* ── Raycast-style Command Modal ── */}
       <AnimatePresence>
         {editingTask && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -339,76 +353,78 @@ export function CalendarView() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setEditingTask(null)}
-              className="absolute inset-0 bg-surface-50/80 backdrop-blur-md"
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             />
 
-            {/* Modal Dialog */}
+            {/* Dialog panel */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 16 }}
-              transition={{ type: "spring", stiffness: 350, damping: 28 }}
-              className="relative z-10 w-full max-w-md rounded-2xl glass-card p-6 border border-surface-500/30 bg-surface-200/95 shadow-glow"
+              exit={{ opacity: 0, scale: 0.96, y: 12 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+              className="relative z-10 w-full max-w-md rounded-2xl bg-[#121218] border border-white/[0.12] p-6 shadow-2xl"
             >
               {/* Header */}
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-accent/20 border border-accent/40 flex items-center justify-center">
-                    <Edit3 className="w-4 h-4 text-accent" />
+              <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-violet-500/15 border border-violet-500/30 flex items-center justify-center">
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-violet-400" />
                   </div>
                   <div>
-                    <h3 className="text-base font-semibold text-foreground">
+                    <h3 className="text-sm font-semibold text-zinc-100">
                       Edit Task
                     </h3>
-                    <p className="text-xs text-muted">
-                      Modify schedule details below
+                    <p className="text-[11px] text-zinc-500 font-mono">
+                      {editingTask.id.slice(0, 8)}…
                     </p>
                   </div>
                 </div>
 
                 <button
                   onClick={() => setEditingTask(null)}
-                  className="text-muted hover:text-foreground transition-colors p-1"
+                  className="text-zinc-500 hover:text-zinc-200 transition-colors p-1"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
               {/* Form */}
-              <form onSubmit={handleSaveEdit} className="space-y-4">
-                {/* Title Input */}
+              <form onSubmit={handleSaveEdit} className="space-y-4 pt-4">
+                {/* Title */}
                 <div>
-                  <label className="block text-xs font-medium text-muted mb-1.5">
-                    Task Title
+                  <label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">
+                    Title
                   </label>
                   <input
                     type="text"
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
                     required
-                    className="input-field text-sm"
-                    placeholder="e.g. Deep Work Session"
+                    className="clean-input"
+                    placeholder="Task name"
                   />
                 </div>
 
-                {/* Grid for Start Time & Duration */}
+                {/* Time & Duration */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-muted mb-1.5">
-                      Start Time (HH:MM)
+                    <label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">
+                      Start Time
                     </label>
-                    <input
-                      type="time"
-                      value={editStartTime}
-                      onChange={(e) => setEditStartTime(e.target.value)}
-                      required
-                      className="input-field text-sm font-mono"
-                    />
+                    <div className="relative">
+                      <input
+                        type="time"
+                        value={editStartTime}
+                        onChange={(e) => setEditStartTime(e.target.value)}
+                        required
+                        className="clean-input font-mono"
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-muted mb-1.5">
-                      Duration (minutes)
+                    <label className="block text-[11px] uppercase tracking-wider font-semibold text-zinc-400 mb-1.5">
+                      Duration (min)
                     </label>
                     <input
                       type="number"
@@ -418,13 +434,21 @@ export function CalendarView() {
                       value={editDuration}
                       onChange={(e) => setEditDuration(Number(e.target.value))}
                       required
-                      className="input-field text-sm font-mono"
+                      className="clean-input font-mono"
                     />
                   </div>
                 </div>
 
-                {/* Status Toggle in Modal */}
-                <div className="pt-2 flex items-center justify-between border-t border-surface-500/10">
+                {/* Advice preview if present */}
+                {editingTask.description && (
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-xs text-zinc-400 leading-relaxed">
+                    <span className="text-violet-400 font-medium">Advice:</span>{" "}
+                    {editingTask.description}
+                  </div>
+                )}
+
+                {/* Bottom row: complete toggle + delete */}
+                <div className="pt-2 flex items-center justify-between border-t border-white/[0.06]">
                   <button
                     type="button"
                     onClick={() => {
@@ -434,39 +458,41 @@ export function CalendarView() {
                         completed: !editingTask.completed,
                       });
                     }}
-                    className="flex items-center gap-2 text-xs text-muted hover:text-foreground transition-colors"
+                    className="flex items-center gap-2 text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
                   >
                     {editingTask.completed ? (
                       <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                     ) : (
-                      <Circle className="w-4 h-4" />
+                      <Circle className="w-4 h-4 text-zinc-600" />
                     )}
                     <span>
-                      {editingTask.completed
-                        ? "Completed"
-                        : "Mark as Completed"}
+                      {editingTask.completed ? "Completed" : "Mark Done"}
                     </span>
                   </button>
 
-                  <span className="text-[11px] text-muted capitalize px-2 py-0.5 rounded-full bg-surface-300/40">
-                    {editingTask.category || "routine"}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      removeTask(editingTask.id);
+                      setEditingTask(null);
+                    }}
+                    className="text-zinc-500 hover:text-rose-400 text-xs flex items-center gap-1 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete
+                  </button>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex items-center justify-end gap-3 pt-3">
+                {/* Actions */}
+                <div className="flex items-center justify-end gap-2.5 pt-3">
                   <button
                     type="button"
                     onClick={() => setEditingTask(null)}
-                    className="btn-outline text-xs py-2 px-4"
+                    className="btn-secondary"
                   >
                     Cancel
                   </button>
-                  <button
-                    type="submit"
-                    className="btn-glow text-xs py-2 px-4 flex items-center gap-1.5"
-                  >
-                    <Save className="w-3.5 h-3.5" />
+                  <button type="submit" className="btn-primary">
                     Save Changes
                   </button>
                 </div>
