@@ -68,7 +68,7 @@ export function ExportCalendarButton() {
               <span className="text-xs font-medium text-zinc-100">
                 Schedule Exported
               </span>
-              <span className="text-[11px] font-mono text-zinc-400">
+              <span className="text-xs font-medium text-zinc-400">
                 allili-schedule.ics
               </span>
             </div>

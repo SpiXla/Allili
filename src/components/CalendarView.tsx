@@ -434,7 +434,7 @@ export function CalendarView() {
                       style={{ top: `${topPx}px` }}
                       className="absolute left-0 right-0 -translate-y-1/2 pr-3 text-right"
                     >
-                      <span className="text-[11px] font-mono font-medium text-slate-400">
+                      <span className="text-xs font-medium tabular-nums text-zinc-400">
                         {timeStr}
                       </span>
                     </div>
@@ -537,10 +537,10 @@ export function CalendarView() {
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-1 flex-shrink-0">
-                                    <span className="text-[10px] font-mono text-slate-400">
+                                    <span className="text-[10px] font-medium tabular-nums text-slate-300">
                                       {task.startTime}
                                     </span>
-                                    <span className="text-[9px] font-mono text-slate-400 bg-white/[0.06] px-1 py-0.5 rounded">
+                                    <span className="text-[9px] font-semibold tabular-nums text-slate-300 bg-white/[0.08] px-1 py-0.5 rounded">
                                       {task.duration}m
                                     </span>
                                   </div>
@@ -574,7 +574,7 @@ export function CalendarView() {
                                         {task.title}
                                       </span>
                                     </div>
-                                    <span className="text-[10px] font-mono text-slate-400 flex-shrink-0">
+                                    <span className="text-[10px] font-medium tabular-nums text-slate-300 flex-shrink-0">
                                       {task.startTime}
                                     </span>
                                   </div>
@@ -585,7 +585,7 @@ export function CalendarView() {
                                     >
                                       {task.category || "routine"}
                                     </span>
-                                    <span className="text-[10px] font-mono text-slate-400">
+                                    <span className="text-[10px] font-medium tabular-nums text-slate-300">
                                       {task.duration}m
                                     </span>
                                   </div>
@@ -620,7 +620,7 @@ export function CalendarView() {
                                           >
                                             {task.title}
                                           </h4>
-                                          <span className="text-[10px] font-mono text-slate-400 block mt-0.5">
+                                          <span className="text-[11px] font-medium tabular-nums text-slate-300 block mt-0.5">
                                             {task.startTime}
                                             {task.endTime ? ` – ${task.endTime}` : ""}
                                           </span>
@@ -641,7 +641,7 @@ export function CalendarView() {
                                     >
                                       {theme.label}
                                     </span>
-                                    <span className="text-[10px] font-mono text-slate-400">
+                                    <span className="text-[10px] font-medium tabular-nums text-slate-300">
                                       {task.duration} mins
                                     </span>
                                   </div>
@@ -761,10 +761,10 @@ export function CalendarView() {
                         {/* Right: Time & Edit trigger */}
                         <div className="flex items-center gap-3 flex-shrink-0">
                           <div className="text-right">
-                            <span className="text-xs font-mono font-medium text-slate-200 block">
+                            <span className="text-xs font-semibold tabular-nums text-slate-200 block">
                               {task.startTime}
                             </span>
-                            <span className="text-[10px] font-mono text-slate-400 block">
+                            <span className="text-[10px] font-medium tabular-nums text-slate-400 block">
                               {task.duration}m
                             </span>
                           </div>
@@ -853,7 +853,7 @@ export function CalendarView() {
                       value={editStartTime}
                       onChange={(e) => setEditStartTime(e.target.value)}
                       required
-                      className="clean-input font-mono"
+                      className="clean-input tabular-nums"
                     />
                   </div>
 
@@ -869,7 +869,7 @@ export function CalendarView() {
                       value={editDuration}
                       onChange={(e) => setEditDuration(Number(e.target.value))}
                       required
-                      className="clean-input font-mono"
+                      className="clean-input tabular-nums"
                     />
                   </div>
                 </div>

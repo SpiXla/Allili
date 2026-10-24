@@ -296,7 +296,7 @@ export default function Home() {
             <span className="font-bold text-base tracking-tight text-white">
               Allili
             </span>
-            <span className="text-[10px] font-mono tracking-wider uppercase text-indigo-300 font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20">
+            <span className="text-[11px] font-semibold tracking-wide uppercase text-indigo-300 px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20">
               Cyber-Luxe
             </span>
           </div>
@@ -307,7 +307,7 @@ export default function Home() {
           {(hasTimeline || userInput.trim() || previousPrompt) && (
             <button
               onClick={handleReset}
-              className="text-zinc-400 hover:text-zinc-100 text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-white/[0.05] border border-transparent hover:border-white/[0.08] transition-all"
+              className="text-zinc-400 hover:text-zinc-100 text-xs font-medium flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-white/[0.05] border border-transparent hover:border-white/[0.08] transition-all"
               title="Reset prompt and schedule"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -318,10 +318,10 @@ export default function Home() {
           {hasTimeline && <ExportCalendarButton />}
 
           {/* Engine indicator */}
-          <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono text-zinc-300 bg-[#0d111d] px-3 py-1.5 rounded-lg border border-white/[0.08] shadow-inner">
+          <div className="hidden sm:flex items-center gap-2 text-xs font-medium text-zinc-300 bg-[#0d111d] px-3 py-1.5 rounded-lg border border-white/[0.08] shadow-inner">
             <Cpu className="w-3.5 h-3.5 text-indigo-400" />
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
-            <span className="font-medium text-zinc-200">Gemma 4</span>
+            <span className="font-semibold text-zinc-200">Gemma 4</span>
           </div>
         </div>
       </header>
@@ -336,7 +336,7 @@ export default function Home() {
             {/* Header info */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-mono uppercase tracking-widest text-indigo-400 font-bold flex items-center gap-1.5">
+                <span className="text-[11px] uppercase tracking-wider text-indigo-400 font-bold flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_6px_rgba(99,102,241,0.8)]" />
                   Prompt Command Deck
                 </span>
@@ -347,7 +347,7 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={handleRevertPrompt}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-mono text-indigo-300 hover:text-white bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 transition-all shadow-sm"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-indigo-300 hover:text-white bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 transition-all shadow-sm"
                       title="Revert to original unoptimized prompt"
                     >
                       <RotateCcw className="w-3 h-3" />
@@ -358,7 +358,7 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={handleReset}
-                      className="text-[11px] font-mono text-zinc-500 hover:text-zinc-300 underline decoration-dotted transition-colors"
+                      className="text-xs font-medium text-zinc-500 hover:text-zinc-300 underline decoration-dotted transition-colors"
                       title="Clear prompt and reset"
                     >
                       Clear
@@ -427,35 +427,35 @@ export default function Home() {
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder="Write your day or week here: e.g. Finish push_swap project by tomorrow 2pm, hit the gym for 2 hours, get 8 hours of sleep…"
-                className="flex-1 w-full resize-none bg-transparent text-zinc-100 placeholder:text-zinc-600 text-xs leading-relaxed p-4 focus:outline-none scrollbar-thin font-sans"
+                className="flex-1 w-full resize-none bg-transparent text-zinc-100 placeholder:text-zinc-600 text-xs leading-relaxed p-4 focus:outline-none scrollbar-thin"
                 disabled={isLoading || isOptimizing}
               />
 
               {/* Character & Shortcut Counter */}
-              <div className="flex items-center justify-between px-4 py-3 border-t border-white/[0.05] bg-white/[0.01] text-[11px] font-mono text-zinc-500">
+              <div className="flex items-center justify-between px-4 py-3 border-t border-white/[0.05] bg-white/[0.01] text-xs text-zinc-400">
                 <div className="flex items-center gap-2">
-                  <span>
+                  <span className="tabular-nums">
                     {userInput.length > 0
                       ? `${userInput.length} chars`
                       : "Empty"}
                   </span>
                   {previousPrompt && (
                     <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20">
-                      <span className="text-indigo-300 flex items-center gap-1 font-sans text-[10px] font-medium">
+                      <span className="text-indigo-300 flex items-center gap-1 text-[11px] font-medium">
                         <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
                         Optimized
                       </span>
                       <button
                         type="button"
                         onClick={handleRevertPrompt}
-                        className="text-zinc-400 hover:text-zinc-200 underline decoration-dotted transition-colors text-[10px]"
+                        className="text-zinc-400 hover:text-zinc-200 underline decoration-dotted transition-colors text-[11px]"
                       >
                         undo
                       </button>
                     </div>
                   )}
                 </div>
-                <span className="text-zinc-600 font-mono text-[10px]">
+                <span className="text-zinc-500 text-xs font-medium">
                   ⌘ / Ctrl + Enter
                 </span>
               </div>
@@ -463,7 +463,7 @@ export default function Home() {
 
             {/* Quick Inspiration Prompts with category badges */}
             <div>
-              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 font-semibold mb-2.5 block">
+              <span className="text-xs uppercase tracking-wider text-zinc-400 font-semibold mb-2.5 block">
                 Quick Prompts
               </span>
               <div className="flex flex-col gap-2">
@@ -472,10 +472,10 @@ export default function Home() {
                     key={i}
                     onClick={() => setUserInput(item.text)}
                     disabled={isLoading}
-                    className="text-left group flex items-center gap-2.5 text-[11px] text-zinc-300 hover:text-white bg-[#0e1320]/80 hover:bg-[#13192b] border border-white/[0.06] hover:border-indigo-500/30 px-3 py-2 rounded-xl transition-all shadow-sm"
+                    className="text-left group flex items-center gap-2.5 text-xs text-zinc-300 hover:text-white bg-[#0e1320]/80 hover:bg-[#13192b] border border-white/[0.06] hover:border-indigo-500/30 px-3 py-2 rounded-xl transition-all shadow-sm"
                   >
                     <span
-                      className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-medium border ${item.color} flex items-center gap-1 flex-shrink-0`}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-semibold tracking-wide border ${item.color} flex items-center gap-1 flex-shrink-0`}
                     >
                       <span className={`w-1 h-1 rounded-full ${item.dot}`} />
                       {item.tag}
@@ -518,26 +518,26 @@ export default function Home() {
                 className="p-4 rounded-xl bg-[#0d1220]/90 border border-white/[0.08] grid grid-cols-3 gap-2 text-center shadow-lg backdrop-blur-md"
               >
                 <div className="border-r border-white/[0.06] pr-2">
-                  <span className="text-[10px] font-mono text-zinc-500 block uppercase tracking-wider">
+                  <span className="text-[11px] font-medium text-zinc-400 block uppercase tracking-wider">
                     Planned
                   </span>
-                  <span className="text-sm font-semibold text-sky-400 font-mono">
+                  <span className="text-base font-semibold text-sky-400 tabular-nums tracking-tight">
                     {stats.totalHours}h
                   </span>
                 </div>
                 <div className="border-r border-white/[0.06] px-2">
-                  <span className="text-[10px] font-mono text-zinc-500 block uppercase tracking-wider">
+                  <span className="text-[11px] font-medium text-zinc-400 block uppercase tracking-wider">
                     Deep Work
                   </span>
-                  <span className="text-sm font-semibold text-indigo-400 font-mono">
+                  <span className="text-base font-semibold text-indigo-400 tabular-nums tracking-tight">
                     {stats.workHours}h
                   </span>
                 </div>
                 <div className="pl-2">
-                  <span className="text-[10px] font-mono text-zinc-500 block uppercase tracking-wider">
+                  <span className="text-[11px] font-medium text-zinc-400 block uppercase tracking-wider">
                     Breaks
                   </span>
-                  <span className="text-sm font-semibold text-emerald-400 font-mono">
+                  <span className="text-base font-semibold text-emerald-400 tabular-nums tracking-tight">
                     {stats.breakHours}h
                   </span>
                 </div>
@@ -560,7 +560,7 @@ export default function Home() {
             </div>
 
             {hasTimeline && (
-              <span className="text-[11px] font-mono text-indigo-300 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20 font-medium">
+              <span className="text-xs font-medium tabular-nums text-indigo-300 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">
                 {timelineData.length} tasks scheduled
               </span>
             )}
