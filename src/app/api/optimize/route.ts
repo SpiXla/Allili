@@ -125,6 +125,29 @@ Do NOT output thinking, analysis, markdown code blocks, or polite conversational
       optimizedPrompt = optimizedPrompt.slice(1, -1).trim();
     }
 
+    // If the model produced a planning scratchpad followed by the actual timeline,
+    // locate the start of the actual timeline (first line starting with a time format HH:MM)
+    const lines = optimizedPrompt.split("\n");
+    const firstTimeIndex = lines.findIndex((l) =>
+      /^\s*[-*•]?\s*\d{1,2}:\d{2}\s*[-–]/.test(l)
+    );
+    if (firstTimeIndex > 2) {
+      // Check if there was a header just before it like "Schedule:" or "Agenda:"
+      const headerIndex = firstTimeIndex > 0 && /schedule|agenda|timeline/i.test(lines[firstTimeIndex - 1])
+        ? firstTimeIndex - 1
+        : firstTimeIndex;
+      optimizedPrompt = `Schedule for ${todayStr} (${dayStr}):\n` + lines.slice(headerIndex).join("\n").trim();
+    }
+
+    // Strip any trailing post-generation reflection or checklist (e.g. "Check.", "Self-Correction")
+    const cleanLines = optimizedPrompt.split("\n");
+    const checkIndex = cleanLines.findIndex((l) =>
+      /^\s*[-*•]?\s*(?:\*?Self-Correction|Date awareness:|Daily habits included|Priority badges|No conversational filler)/i.test(l)
+    );
+    if (checkIndex !== -1) {
+      optimizedPrompt = cleanLines.slice(0, checkIndex).join("\n").trim();
+    }
+
     return NextResponse.json({
       optimizedPrompt,
       currentDate: todayStr,
