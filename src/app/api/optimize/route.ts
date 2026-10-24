@@ -32,20 +32,16 @@ export async function POST(req: NextRequest) {
 
     const ai = new GoogleGenAI({ apiKey });
 
-    // Use fast flash model for rapid prompt enhancement, or configured override
+    // Strictly use Gemma 4
+    const configuredModel = process.env.GEMMA_MODEL || "gemma-4-26b-a4b-it";
     const model =
-      process.env.OPTIMIZE_MODEL ||
-      (process.env.GEMMA_MODEL === "gemma-4"
-        ? "gemini-2.5-flash"
-        : process.env.GEMMA_MODEL) ||
-      "gemini-2.5-flash";
+      configuredModel === "gemma-4" ? "gemma-4-26b-a4b-it" : configuredModel;
 
     const response = await ai.models.generateContent({
       model,
       contents: prompt,
       config: {
         systemInstruction: OPTIMIZE_SYSTEM_PROMPT,
-        temperature: 0.7,
       },
     });
 
