@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useScheduleStore, type Task } from "@/store/useScheduleStore";
 import { TimelineSkeleton } from "@/components/TimelineSkeleton";
-import { TimelineList } from "@/components/TimelineList";
+import { CalendarView } from "@/components/CalendarView";
 import { ExportCalendarButton } from "@/components/ExportCalendarButton";
 
 interface ApiTaskItem {
@@ -316,8 +316,8 @@ export default function Home() {
             {/* Loading state */}
             {isLoading && <TimelineSkeleton />}
 
-            {/* Timeline items */}
-            {!isLoading && hasTimeline && <TimelineList />}
+            {/* Calendar time-grid view */}
+            {!isLoading && hasTimeline && <CalendarView />}
 
             {/* Empty state */}
             {isEmpty && (

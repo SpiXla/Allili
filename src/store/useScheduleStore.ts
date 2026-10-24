@@ -29,6 +29,7 @@ interface ScheduleState {
   addTask: (task: Task) => void;
   removeTask: (id: string) => void;
   toggleTaskCompleted: (id: string) => void;
+  updateTask: (id: string, updates: Partial<Task>) => void;
   reset: () => void;
 }
 
@@ -57,6 +58,13 @@ export const useScheduleStore = create<ScheduleState>()((set) => ({
     set((state) => ({
       timelineData: state.timelineData.map((t) =>
         t.id === id ? { ...t, completed: !t.completed } : t
+      ),
+    })),
+
+  updateTask: (id, updates) =>
+    set((state) => ({
+      timelineData: state.timelineData.map((t) =>
+        t.id === id ? { ...t, ...updates } : t
       ),
     })),
 
